@@ -22,7 +22,7 @@ def facecrop(org_path,save_path,face_detector,face_predictor,period=1,num_frames
     frame_count_org = int(cap_org.get(cv2.CAP_PROP_FRAME_COUNT))
 
     
-    frame_idxs = np.linspace(0, frame_count_org - 1, num_frames, endpoint=True, dtype=np.int)
+    frame_idxs = np.linspace(0, frame_count_org - 1, num_frames, endpoint=True, dtype=np.int32)
     for cnt_frame in range(frame_count_org): 
         ret_org, frame_org = cap_org.read()
         height,width=frame_org.shape[:-1]
@@ -80,7 +80,7 @@ if __name__=='__main__':
     parser.add_argument('-n',dest='num_frames',type=int,default=32)
     args=parser.parse_args()
     if args.dataset=='Original':
-        dataset_path='data/FaceForensics++/original_sequences/youtube/{}/'.format(args.comp)
+        dataset_path='/datasets/FaceForensics++/original_download/original_sequences/youtube/'
     elif args.dataset=='DeepFakeDetection_original':
         dataset_path='data/FaceForensics++/original_sequences/actors/{}/'.format(args.comp)
     elif args.dataset in ['DeepFakeDetection','FaceShifter','Face2Face','Deepfakes','FaceSwap','NeuralTextures']:
@@ -96,7 +96,8 @@ if __name__=='__main__':
     predictor_path = 'src/preprocess/shape_predictor_81_face_landmarks.dat'
     face_predictor = dlib.shape_predictor(predictor_path)
     
-    movies_path=dataset_path+'videos/'
+    movies_path=dataset_path
+    print(movies_path)
 
     movies_path_list=sorted(glob(movies_path+'*.mp4'))
     print("{} : videos are exist in {}".format(len(movies_path_list),args.dataset))
@@ -104,10 +105,10 @@ if __name__=='__main__':
 
     n_sample=len(movies_path_list)
 
+    SAVE_PATH = r"/datasets/FaceForensics++/sbi/"
     for i in tqdm(range(n_sample)):
         folder_path=movies_path_list[i].replace('videos/','frames/').replace('.mp4','/')
-       
-        facecrop(movies_path_list[i],save_path=dataset_path,num_frames=args.num_frames,face_predictor=face_predictor,face_detector=face_detector)
+        facecrop(movies_path_list[i],save_path=SAVE_PATH,num_frames=args.num_frames,face_predictor=face_predictor,face_detector=face_detector)
     
 
     
