@@ -17,6 +17,10 @@ from datetime import datetime
 from tqdm import tqdm
 from model import Detector
 
+import wandb
+
+USE_WANDB = False
+
 def compute_accuray(pred,true):
     pred_idx=pred.argmax(dim=1).cpu().data.numpy()
     tmp=pred_idx==true.cpu().numpy()
@@ -91,6 +95,15 @@ def main(args):
     last_val_auc=0
     weight_dict={}
     n_weight=5
+
+    if USE_WANDB:
+        logger.info('Initializing weights and biases...')
+        wandb.init(
+            project="SBI",
+            config=cfg,
+            resume=False
+        )
+
     for epoch in range(n_epoch):
         np.random.seed(seed + epoch)
         train_loss=0.
@@ -146,6 +159,13 @@ def main(args):
                         val_acc/len(val_loader),
                         val_auc
                         )
+        if USE_WANDB:
+            wandb.log({
+                'Val/Loss': val_loss/len(val_loader),
+                'Val/Accuracy': val_acc/len(val_loader),
+                'Train/Loss': train_loss/len(train_loader),
+                'Train/Accuracy': train_acc/len(train_loader),
+            })
      
 
         if len(weight_dict)<n_weight:
