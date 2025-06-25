@@ -19,7 +19,7 @@ def facecrop(model,org_path,save_path,period=1,num_frames=10):
 	croppedfaces=[]
 	frame_count_org = int(cap_org.get(cv2.CAP_PROP_FRAME_COUNT))
 	
-	frame_idxs = np.linspace(0, frame_count_org - 1, num_frames, endpoint=True, dtype=np.int)
+	frame_idxs = np.linspace(0, frame_count_org - 1, num_frames, endpoint=True, dtype=np.int32)
 	
 	for cnt_frame in range(frame_count_org): 
 		ret_org, frame_org = cap_org.read()
@@ -56,16 +56,19 @@ def facecrop(model,org_path,save_path,period=1,num_frames=10):
 		landmarks=landmarks[np.argsort(np.array(size_list))[::-1]]
 			
 
-		save_path_=save_path+'frames/'+os.path.basename(org_path).replace('.mp4','/')
+		save_path_=save_path+'/frames/'+os.path.basename(org_path).replace('.mp4','/')
 		os.makedirs(save_path_,exist_ok=True)
 		image_path=save_path_+str(cnt_frame).zfill(3)+'.png'
 		land_path=save_path_+str(cnt_frame).zfill(3)
 
 		land_path=land_path.replace('/frames','/retina')
 		os.makedirs(os.path.dirname(land_path),exist_ok=True)
+		print(land_path)
 		np.save(land_path, landmarks)
-
+		print(image_path)
 		if not os.path.isfile(image_path):
+			print("hello")
+			print(image_path)
 			cv2.imwrite(image_path,frame_org)
 
 	cap_org.release()
@@ -80,7 +83,7 @@ if __name__=='__main__':
 	parser.add_argument('-n',dest='num_frames',type=int,default=32)
 	args=parser.parse_args()
 	if args.dataset=='Original':
-		dataset_path='data/FaceForensics++/original_sequences/youtube/{}/'.format(args.comp)
+		dataset_path='/datasets/FaceForensics++/original_download/original_sequences/youtube/'
 	elif args.dataset=='DeepFakeDetection_original':
 		dataset_path='data/FaceForensics++/original_sequences/actors/{}/'.format(args.comp)
 	elif args.dataset in ['DeepFakeDetection','FaceShifter','Face2Face','Deepfakes','FaceSwap','NeuralTextures']:
@@ -97,19 +100,29 @@ if __name__=='__main__':
 	model = get_model("resnet50_2020-07-20", max_size=2048,device=device)
 	model.eval()
 
-
-	movies_path=dataset_path+'videos/'
-
-	movies_path_list=sorted(glob(movies_path+'*.mp4'))
-	print("{} : videos are exist in {}".format(len(movies_path_list),args.dataset))
-
-
-	n_sample=len(movies_path_list)
-	
+	movies_path = r'/datasets/FaceForensics++/sbi'
+	movies_list = os.listdir(os.path.join(movies_path, 'frames'))
+	n_sample=len(movies_list)
+	print("{} : videos are exist in {}".format(len(movies_list),args.dataset))
 	for i in tqdm(range(n_sample)):
-		folder_path=movies_path_list[i].replace('videos/','frames/').replace('.mp4','/')
+		folder_path=os.path.join(movies_path, 'frames', movies_list[i])
+		print(folder_path)
+		
 		if len(glob(folder_path.replace('/frames/','/retina/')+'*.npy'))<args.num_frames:
-			facecrop(model,movies_path_list[i],save_path=dataset_path,num_frames=args.num_frames)
+			facecrop(model, os.path.join(dataset_path, movies_list[i] + '.mp4') ,save_path=movies_path,num_frames=args.num_frames)
+	# movies_path=dataset_path
+
+	# movies_path_list=sorted(glob(movies_path+'*.mp4'))
+	# print("{} : videos are exist in {}".format(len(movies_path_list),args.dataset))
+
+
+	# n_sample=len(movies_path_list)
+	
+	# for i in tqdm(range(n_sample)):
+	# 	print(movies_path_list[i])
+	# 	folder_path=movies_path_list[i].replace('videos/','frames/').replace('.mp4','/')
+	# 	if len(glob(folder_path.replace('/frames/','/retina/')+'*.npy'))<args.num_frames:
+	# 		facecrop(model,movies_path_list[i],save_path=dataset_path,num_frames=args.num_frames)
 	
 
 	
