@@ -1,6 +1,8 @@
 
 {
     "epoch":100,
-    "batch_size":32,
-    "image_size":380
+    "batch_size":16,
+    "image_size":380,
+    "use_wandb": 1,
+    "lr": 0.001
 }
