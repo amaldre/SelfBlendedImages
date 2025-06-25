@@ -13,9 +13,6 @@ from imutils import face_utils
 
 
 def facecrop(org_path,save_path,face_detector,face_predictor,period=1,num_frames=10):
-
-    
-
     cap_org = cv2.VideoCapture(org_path)
     
     croppedfaces=[]
@@ -24,6 +21,18 @@ def facecrop(org_path,save_path,face_detector,face_predictor,period=1,num_frames
     
     frame_idxs = np.linspace(0, frame_count_org - 1, num_frames, endpoint=True, dtype=np.int32)
     for cnt_frame in range(frame_count_org): 
+        save_path_=save_path+'frames/'+os.path.basename(org_path).replace('.mp4','/')
+        os.makedirs(save_path_,exist_ok=True)
+        image_path=os.path.join(save_path_,str(cnt_frame).zfill(3)+'.png')
+        land_path=os.path.join(save_path_,str(cnt_frame).zfill(3))
+        land_path=land_path.replace('/frames','/landmarks')
+        os.makedirs(os.path.dirname(land_path),exist_ok=True)
+
+        # Check if both image and landmark file already exist
+        if os.path.isfile(image_path) and os.path.isfile(land_path + '.npy'):
+                tqdm.write(f'Skipping frame {cnt_frame} for {os.path.basename(org_path)} (already exists)')
+                continue
+
         ret_org, frame_org = cap_org.read()
         height,width=frame_org.shape[:-1]
         if not ret_org:
@@ -54,23 +63,14 @@ def facecrop(org_path,save_path,face_detector,face_predictor,period=1,num_frames
         landmarks=np.concatenate(landmarks).reshape((len(size_list),)+landmark.shape)
         landmarks=landmarks[np.argsort(np.array(size_list))[::-1]]
             
-
-        save_path_=save_path+'frames/'+os.path.basename(org_path).replace('.mp4','/')
-        os.makedirs(save_path_,exist_ok=True)
-        image_path=save_path_+str(cnt_frame).zfill(3)+'.png'
-        land_path=save_path_+str(cnt_frame).zfill(3)
-
-        land_path=land_path.replace('/frames','/landmarks')
-
-        os.makedirs(os.path.dirname(land_path),exist_ok=True)
         np.save(land_path, landmarks)
 
+        # Only write the image if it doesn't exist
         if not os.path.isfile(image_path):
             cv2.imwrite(image_path,frame_org)
 
     cap_org.release()
     return
-
 
 
 if __name__=='__main__':
@@ -109,6 +109,3 @@ if __name__=='__main__':
     for i in tqdm(range(n_sample)):
         folder_path=movies_path_list[i].replace('videos/','frames/').replace('.mp4','/')
         facecrop(movies_path_list[i],save_path=SAVE_PATH,num_frames=args.num_frames,face_predictor=face_predictor,face_detector=face_detector)
-    
-
-    
