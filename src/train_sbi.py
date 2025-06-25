@@ -19,8 +19,6 @@ from model import Detector
 
 import wandb
 
-USE_WANDB = False
-
 def compute_accuray(pred,true):
     pred_idx=pred.argmax(dim=1).cpu().data.numpy()
     tmp=pred_idx==true.cpu().numpy()
@@ -28,7 +26,7 @@ def compute_accuray(pred,true):
 
 def main(args):
     cfg=load_json(args.config)
-
+    USE_WANDB = cfg['use_wandb'] == 1
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -83,6 +81,8 @@ def main(args):
 
     now=datetime.now()
     save_path='output/{}_'.format(args.session_name)+now.strftime(os.path.splitext(os.path.basename(args.config))[0])+'_'+now.strftime("%m_%d_%H_%M_%S")+'/'
+    if (not os.path.exists('output')):
+        os.mkdir('output')
     os.mkdir(save_path)
     os.mkdir(save_path+'weights/')
     os.mkdir(save_path+'logs/')
@@ -162,7 +162,8 @@ def main(args):
         if USE_WANDB:
             wandb.log({
                 'Val/Loss': val_loss/len(val_loader),
-                'Val/Accuracy': val_acc/len(val_loader),
+                'Val/Accuracy': val_acc/len(val_loader)
+                'Val/AUC': val_auc,
                 'Train/Loss': train_loss/len(train_loader),
                 'Train/Accuracy': train_acc/len(train_loader),
             })
@@ -196,8 +197,6 @@ def main(args):
         logger.info(log_text)
         
 if __name__=='__main__':
-
-
     parser=argparse.ArgumentParser()
     parser.add_argument(dest='config')
     parser.add_argument('-n',dest='session_name')
