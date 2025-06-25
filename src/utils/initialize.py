@@ -10,7 +10,7 @@ import pandas as pd
 
 
 def init_ff(phase,level='frame',n_frames=8):
-	dataset_path='/datasets/FaceForensics++/c23/train/frames/aligned_Original_81'
+	dataset_path='/datasets/FaceForensics++/sbi/frames/'
 	
 
 	image_list=[]
