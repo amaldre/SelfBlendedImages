@@ -229,7 +229,7 @@ def main(args):
             if (not best_model in val_dict):
                 val_dict.add(best_model)
                 for dataset in cfg.val_datsets:
-                    auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, dataset)
+                    auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, dataset, False)
                 if (USE_WANDB):
                     wandb.log({
                         "Test/AUC": auc_test,
