@@ -86,37 +86,39 @@ def main(args):
 
     print(f'{args.dataset}| AUC: {auc:.4f}, Accuracy: {accuracy:.4f}, Avg Precision: {avg_precision:.4f}, Avg Recall: {avg_recall:.4f}')
 
-    # --- ROC Curve Plot ---
-    fpr, tpr, thresholds = roc_curve(target_list, output_list)
-    plt.figure(figsize=(8, 6))
-    plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {auc:.2f})')
-    plt.plot([0, 1], [0, 1], color='gray', linestyle='--', lw=2, label='Random Classifier')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate (FPR)')
-    plt.ylabel('True Positive Rate (TPR)')
-    plt.title(f'Receiver Operating Characteristic (ROC) Curve for {args.dataset}')
-    plt.legend(loc="lower right")
-    roc_plot_filename = f'ROC_Curve_{args.dataset}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
-    plt.savefig(roc_plot_filename)
-    plt.close()
-    print(f"ROC curve saved to {roc_plot_filename}")
+    if (args.plot):
+        # --- ROC Curve Plot ---
+        fpr, tpr, thresholds = roc_curve(target_list, output_list)
+        plt.figure(figsize=(8, 6))
+        plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {auc:.2f})')
+        plt.plot([0, 1], [0, 1], color='gray', linestyle='--', lw=2, label='Random Classifier')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('False Positive Rate (FPR)')
+        plt.ylabel('True Positive Rate (TPR)')
+        plt.title(f'Receiver Operating Characteristic (ROC) Curve for {args.dataset}')
+        plt.legend(loc="lower right")
+        roc_plot_filename = f'ROC_Curve_{args.dataset}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+        plt.savefig(roc_plot_filename)
+        plt.close()
+        print(f"ROC curve saved to {roc_plot_filename}")
 
-    # --- BPCER vs. APCER Plot ---
-    # APCER is FPR, BPCER is FNR (1 - TPR)
-    bpcer = 1 - tpr
-    plt.figure(figsize=(8, 6))
-    plt.plot(fpr, bpcer, color='red', lw=2, label='BPCER vs. APCER')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('APCER (False Positive Rate)')
-    plt.ylabel('BPCER (False Negative Rate)')
-    plt.title(f'BPCER vs. APCER for {args.dataset}')
-    plt.legend(loc="upper right")
-    bpcer_apcer_plot_filename = f'BPCER_APCER_Plot_{args.dataset}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
-    plt.savefig(bpcer_apcer_plot_filename)
-    plt.close()
-    print(f"BPCER vs. APCER plot saved to {bpcer_apcer_plot_filename}")
+        # --- BPCER vs. APCER Plot ---
+        # APCER is FPR, BPCER is FNR (1 - TPR)
+        bpcer = 1 - tpr
+        plt.figure(figsize=(8, 6))
+        plt.plot(fpr, bpcer, color='red', lw=2, label='BPCER vs. APCER')
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.05])
+        plt.xlabel('APCER (False Positive Rate)')
+        plt.ylabel('BPCER (False Negative Rate)')
+        plt.title(f'BPCER vs. APCER for {args.dataset}')
+        plt.legend(loc="upper right")
+        bpcer_apcer_plot_filename = f'BPCER_APCER_Plot_{args.dataset}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+        plt.savefig(bpcer_apcer_plot_filename)
+        plt.close()
+        print(f"BPCER vs. APCER plot saved to {bpcer_apcer_plot_filename}")
+    return auc, accuracy, avg_precision, avg_recall, target_list, output_list
 
 
 if __name__=='__main__':
@@ -134,6 +136,7 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('-w',dest='weight_name',type=str)
     parser.add_argument('-d',dest='dataset',type=str)
+    parser.add_argument('-p', dest='plot', default = False)
     args=parser.parse_args()
 
     main(args)

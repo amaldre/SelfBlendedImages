@@ -19,6 +19,16 @@ from model import Detector
 
 import wandb
 
+from inference.inference_dataset import main as infer
+
+def test(model_path, dataset, plot_bool):
+    args = argparse.Namespace(
+    weight_name=model_path,
+    dataset=dataset,
+    plot = plot_bool
+    )
+    infer(args)
+
 def compute_accuray(pred,true):
     pred_idx=pred.argmax(dim=1).cpu().data.numpy()
     tmp=pred_idx==true.cpu().numpy()
@@ -94,6 +104,7 @@ def main(args):
     last_auc=0
     last_val_auc=0
     weight_dict={}
+    val_dict = {}
     n_weight=5
 
     if USE_WANDB:
@@ -188,6 +199,7 @@ def main(args):
                 'Train/AUC': train_auc
             })
 
+
         if len(weight_dict) < n_weight:
             save_model_path = os.path.join(save_path + 'weights/', "{}_{:.4f}_val.tar".format(epoch + 1, val_auc))
             weight_dict[save_model_path] = val_auc
@@ -212,6 +224,22 @@ def main(args):
             }, save_model_path)
             last_val_auc = min([weight_dict[k] for k in weight_dict])
 
+        if (epoch % cfg.val_every):
+            best_model = max(weight_dict, key=weight_dict.get)
+            if (not best_model in val_dict):
+                val_dict.add(best_model)
+                for dataset in cfg.val_datsets:
+                    auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, dataset)
+                if (USE_WANDB):
+                    wandb.log({
+                        "Test/AUC": auc_test,
+                        "Test/Accuracy": acc_test,
+                        "Test/AP": ap_test,
+                        "Test/AR": ar_test,
+                        "Test/ROC": wandb.plot.roc_curve(target_list, output_list),
+                        "Test/Model": int(os.path.basename(best_model.split('_')[0])),
+                        "test_step": epoch / cfg.val_every
+                    })
         logger.info(log_text)
 
         
