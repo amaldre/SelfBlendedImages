@@ -97,7 +97,7 @@ def init_cdf():
 	image_list=[]
 	label_list=[]
 
-	video_list_txt='data/Celeb-DF-v2/List_of_testing_videos.txt'
+	video_list_txt='/home/alicia/dataShareID/CelebDFv2/List_of_testing_videos.txt'
 	with open(video_list_txt) as f:
 		
 		folder_list=[]
@@ -106,7 +106,7 @@ def init_cdf():
 			line=data.split()
 			# print(line)
 			path=line[1].split('/')
-			folder_list+=['data/Celeb-DF-v2/'+path[0]+'/videos/'+path[1]]
+			folder_list+=['/home/alicia/dataShareID/CelebDFv2/'+path[0]+'/'+path[1]]
 			label_list+=[1-int(line[0])]
 		return folder_list,label_list
 		
