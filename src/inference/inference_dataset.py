@@ -1,38 +1,21 @@
 import os
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torchvision import datasets,transforms,models,utils
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-import pandas as pd
-from PIL import Image
-import sys
 import random
-import shutil
 from model import Detector
 import argparse
 from datetime import datetime
 from tqdm import tqdm
-from retinaface.pre_trained_models import get_model
-from preprocess import extract_frames
 from datasets import *
 from sklearn.metrics import confusion_matrix, roc_auc_score, accuracy_score, precision_score, recall_score, average_precision_score, roc_curve
 import warnings
 warnings.filterwarnings('ignore')
 
+import pickle
+
 def main(args):
-
-    model=Detector()
-    model=model.to(device)
-    cnn_sd=torch.load(args.weight_name)["model"]
-    model.load_state_dict(cnn_sd)
-    model.eval()
-
-    face_detector = get_model("resnet50_2020-07-20", max_size=2048,device=device)
-    face_detector.eval()
 
     if args.dataset == 'FFIW':
         video_list,target_list=init_ffiw()
@@ -45,14 +28,25 @@ def main(args):
     elif args.dataset == 'DFDCP':
         video_list,target_list=init_dfdcp()
     elif args.dataset == 'CDF':
-        video_list,target_list=init_cdf()
+        video_list,target_list, video_root=init_cdf()
     else:
         NotImplementedError
 
+    data_path = os.path.join(video_root, 'video_data.pkl')
+    assert(os.path.exists(data_path))
+    print("------Inference mode------")
+    model=Detector()
+    model=model.to(device)
+    cnn_sd=torch.load(args.weight_name)["model"]
+    model.load_state_dict(cnn_sd)
+    model.eval()
     output_list=[]
-    for filename in tqdm(video_list):
+    with open(data_path, 'rb') as f:
+        video_data = pickle.load(f)
+    for filename in tqdm(video_data.keys()):
         try:
-            face_list,idx_list=extract_frames(filename,args.n_frames,face_detector)
+            face_list = video_data[filename]['face_list'] 
+            idx_list = video_data[filename]['idx_list']
 
             with torch.no_grad():
                 img=torch.tensor(face_list).to(device).float()/255
@@ -140,7 +134,6 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('-w',dest='weight_name',type=str)
     parser.add_argument('-d',dest='dataset',type=str)
-    parser.add_argument('-n',dest='n_frames',default=32,type=int)
     args=parser.parse_args()
 
     main(args)
