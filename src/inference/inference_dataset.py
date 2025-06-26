@@ -19,7 +19,7 @@ from tqdm import tqdm
 from retinaface.pre_trained_models import get_model
 from preprocess import extract_frames
 from datasets import *
-from sklearn.metrics import confusion_matrix, roc_auc_score
+from sklearn.metrics import confusion_matrix, roc_auc_score, accuracy_score, precision_score, recall_score, average_precision_score, roc_curve
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -57,8 +57,8 @@ def main(args):
             with torch.no_grad():
                 img=torch.tensor(face_list).to(device).float()/255
                 pred=model(img).softmax(1)[:,1]
-                
-                
+
+
             pred_list=[]
             idx_img=-1
             for i in range(len(pred)):
@@ -76,11 +76,53 @@ def main(args):
         output_list.append(pred)
 
     auc=roc_auc_score(target_list,output_list)
-    print(f'{args.dataset}| AUC: {auc:.4f}')
+
+    # Convert output probabilities to binary predictions using a threshold (e.g., 0.5)
+    binary_predictions = [1 if p >= 0.5 else 0 for p in output_list]
+
+    # Calculate Accuracy
+    accuracy = accuracy_score(target_list, binary_predictions)
+
+    # Calculate Average Precision
+    avg_precision = average_precision_score(target_list, output_list)
+
+    # Calculate Average Recall
+    avg_recall = recall_score(target_list, binary_predictions)
 
 
+    print(f'{args.dataset}| AUC: {auc:.4f}, Accuracy: {accuracy:.4f}, Avg Precision: {avg_precision:.4f}, Avg Recall: {avg_recall:.4f}')
 
+    # --- ROC Curve Plot ---
+    fpr, tpr, thresholds = roc_curve(target_list, output_list)
+    plt.figure(figsize=(8, 6))
+    plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {auc:.2f})')
+    plt.plot([0, 1], [0, 1], color='gray', linestyle='--', lw=2, label='Random Classifier')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate (FPR)')
+    plt.ylabel('True Positive Rate (TPR)')
+    plt.title(f'Receiver Operating Characteristic (ROC) Curve for {args.dataset}')
+    plt.legend(loc="lower right")
+    roc_plot_filename = f'ROC_Curve_{args.dataset}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+    plt.savefig(roc_plot_filename)
+    plt.close()
+    print(f"ROC curve saved to {roc_plot_filename}")
 
+    # --- BPCER vs. APCER Plot ---
+    # APCER is FPR, BPCER is FNR (1 - TPR)
+    bpcer = 1 - tpr
+    plt.figure(figsize=(8, 6))
+    plt.plot(fpr, bpcer, color='red', lw=2, label='BPCER vs. APCER')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('APCER (False Positive Rate)')
+    plt.ylabel('BPCER (False Negative Rate)')
+    plt.title(f'BPCER vs. APCER for {args.dataset}')
+    plt.legend(loc="upper right")
+    bpcer_apcer_plot_filename = f'BPCER_APCER_Plot_{args.dataset}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+    plt.savefig(bpcer_apcer_plot_filename)
+    plt.close()
+    print(f"BPCER vs. APCER plot saved to {bpcer_apcer_plot_filename}")
 
 
 if __name__=='__main__':
@@ -102,4 +144,3 @@ if __name__=='__main__':
     args=parser.parse_args()
 
     main(args)
-
