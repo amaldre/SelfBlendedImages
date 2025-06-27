@@ -98,7 +98,7 @@ def init_cdf():
 	label_list=[]
 
 	video_list_txt='/home/alicia/dataShareID/CelebDFv2/List_of_testing_videos.txt'
-	video_root = os.path.dirname(video_list_txt)
+	video_root = 'CelebDFv2'
 	with open(video_list_txt) as f:
 		
 		folder_list=[]

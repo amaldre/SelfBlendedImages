@@ -1,4 +1,5 @@
 import os
+import sys
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
@@ -8,6 +9,8 @@ from model import Detector
 import argparse
 from datetime import datetime
 from tqdm import tqdm
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(SCRIPT_DIR)
 from datasets import *
 from sklearn.metrics import confusion_matrix, roc_auc_score, accuracy_score, precision_score, recall_score, average_precision_score, roc_curve
 import warnings
@@ -16,6 +19,7 @@ warnings.filterwarnings('ignore')
 import pickle
 
 def main(args):
+    device = torch.device('cuda')
 
     if args.dataset == 'FFIW':
         video_list,target_list=init_ffiw()

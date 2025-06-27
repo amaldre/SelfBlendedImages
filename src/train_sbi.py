@@ -17,9 +17,11 @@ from datetime import datetime
 from tqdm import tqdm
 from model import Detector
 
+
 import wandb
 
 from inference.inference_dataset import main as infer
+from inference.datasets import *
 
 def test(model_path, dataset, plot_bool):
     args = argparse.Namespace(
@@ -104,7 +106,7 @@ def main(args):
     last_auc=0
     last_val_auc=0
     weight_dict={}
-    val_dict = {}
+    val_set = set()
     n_weight=5
 
     if USE_WANDB:
@@ -196,7 +198,8 @@ def main(args):
                 'Val/AUC': val_auc,
                 'Train/Loss': train_loss / len(train_loader),
                 'Train/Accuracy': train_acc / len(train_loader),
-                'Train/AUC': train_auc
+                'Train/AUC': train_auc,
+                'epoch': epoch
             })
 
 
@@ -224,11 +227,11 @@ def main(args):
             }, save_model_path)
             last_val_auc = min([weight_dict[k] for k in weight_dict])
 
-        if (epoch % cfg.val_every):
+        if (not epoch % cfg["test_every"]):
             best_model = max(weight_dict, key=weight_dict.get)
-            if (not best_model in val_dict):
-                val_dict.add(best_model)
-                for dataset in cfg.val_datsets:
+            if (not best_model in val_set):
+                val_set.add(best_model)
+                for dataset in cfg['test_datasets']:
                     auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, dataset, False)
                 if (USE_WANDB):
                     wandb.log({
@@ -238,7 +241,7 @@ def main(args):
                         "Test/AR": ar_test,
                         "Test/ROC": wandb.plot.roc_curve(target_list, output_list),
                         "Test/Model": int(os.path.basename(best_model.split('_')[0])),
-                        "test_step": epoch / cfg.val_every
+                        "test_step": epoch / cfg.test_every
                     })
         logger.info(log_text)
 
