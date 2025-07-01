@@ -29,8 +29,10 @@ def dynamic_blend(source,target,mask):
 
 def get_blend_mask(mask):
 	H,W=mask.shape
-	size_h=np.random.randint(192,257)
-	size_w=np.random.randint(192,257)
+	#size_h=np.random.randint(192,257)
+	#size_w=np.random.randint(192,257)
+	size_h = np.random.randint(H*0.8, H/0.8)
+	size_w = np.random.randint(W*0.8, W/0.8)
 	mask=cv2.resize(mask,(size_w,size_h))
 	kernel_1=random.randrange(5,26,2)
 	kernel_1=(kernel_1,kernel_1)
