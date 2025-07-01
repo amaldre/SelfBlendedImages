@@ -43,8 +43,6 @@ def crop_face(img,landmark=None,bbox=None,margin=False,crop_by_bbox=True,abs_coo
 	H,W=len(img),len(img[0])
 
 	assert landmark is not None or bbox is not None
-
-	H,W=len(img),len(img[0])
 	
 	if crop_by_bbox:
 		x0,y0=bbox[0]
