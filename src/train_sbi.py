@@ -9,7 +9,7 @@ import sys
 import random
 from utils.sbi import SBI_Dataset
 from utils.scheduler import LinearDecayLR
-from sklearn.metrics import confusion_matrix, roc_auc_score
+from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
 import argparse
 from utils.logs import log
 from utils.funcs import load_json
@@ -23,13 +23,15 @@ import wandb
 from inference.inference_dataset import main as infer
 from inference.datasets import *
 
+import matplotlib.pyplot as plt
+
 def test(model_path, dataset, plot_bool):
     args = argparse.Namespace(
     weight_name=model_path,
     dataset=dataset,
     plot = plot_bool
     )
-    infer(args)
+    return infer(args)
 
 def compute_accuray(pred,true):
     pred_idx=pred.argmax(dim=1).cpu().data.numpy()
@@ -79,16 +81,16 @@ def main(args):
     
     
 
-    iter_loss=[]
+    #iter_loss=[]
     train_losses=[]
-    test_losses=[]
+    #test_losses=[]
     train_accs=[]
-    test_accs=[]
+    #test_accs=[]
     val_accs=[]
     val_losses=[]
     n_epoch=cfg['epoch']
     lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
-    last_loss=99999
+    #last_loss=99999
 
 
     now=datetime.now()
@@ -103,7 +105,7 @@ def main(args):
     criterion=nn.CrossEntropyLoss()
 
 
-    last_auc=0
+    #last_auc=0
     last_val_auc=0
     weight_dict={}
     val_set = set()
@@ -132,7 +134,7 @@ def main(args):
             output = model.training_step(img, target)
             loss = criterion(output, target)
             loss_value = loss.item()
-            iter_loss.append(loss_value)
+            #iter_loss.append(loss_value)
             train_loss += loss_value
 
             probs = F.softmax(output, dim=1)
@@ -174,7 +176,7 @@ def main(args):
                 loss = criterion(output, target)
 
             loss_value = loss.item()
-            iter_loss.append(loss_value)
+            #iter_loss.append(loss_value)
             val_loss += loss_value
             acc = compute_accuray(F.log_softmax(output, dim=1), target)
             val_acc += acc
@@ -233,16 +235,31 @@ def main(args):
                 val_set.add(best_model)
                 for dataset in cfg['test_datasets']:
                     auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, dataset, False)
-                if (USE_WANDB):
-                    wandb.log({
-                        "Test/AUC": auc_test,
-                        "Test/Accuracy": acc_test,
-                        "Test/AP": ap_test,
-                        "Test/AR": ar_test,
-                        "Test/ROC": wandb.plot.roc_curve(target_list, output_list),
-                        "Test/Model": int(os.path.basename(best_model.split('_')[0])),
-                        "test_step": epoch / cfg.test_every
-                    })
+                    fpr, tpr, _ = roc_curve(target_list, output_list)
+
+                    # Create the ROC figure
+                    plt.figure()
+                    plt.plot(fpr, tpr, label=f"ROC @ epoch {epoch}")
+                    plt.plot([0, 1], [0, 1], linestyle="--", color="gray")
+                    plt.xlabel("False Positive Rate")
+                    plt.ylabel("True Positive Rate")
+                    plt.title(f"ROC Curve on {dataset} @ epoch {epoch}")
+                    plt.legend(loc="lower right")
+
+                    # Save it to wandb
+                    roc_image = wandb.Image(plt)
+                    plt.close()
+                    if (USE_WANDB):
+                        wandb.log({
+                            f"Test/AUC_{dataset}": auc_test,
+                            f"Test/Accuracy_{dataset}": acc_test,
+                            f"Test/AP_{dataset}": ap_test,
+                            f"Test/AR_{dataset}": ar_test,
+                            f"Test/ROC_{dataset}": wandb.plot.roc_curve(target_list, [[1 - p, p] for p in output_list], labels=["pristine", "fake"]),
+                            f"Test/ROC_Image_{dataset}": roc_image,
+                            f"Test/Model": int(os.path.basename(best_model).split('_')[0]),
+                            f"Test/test_step": epoch / cfg["test_every"]
+                        })
         logger.info(log_text)
 
         
