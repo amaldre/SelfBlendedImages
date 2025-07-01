@@ -205,7 +205,7 @@ def main(args):
             })
 
 
-        if len(weight_dict) < n_weight:
+        if len(weight_dict) < n_weight or epoch == n_epoch - 1:
             save_model_path = os.path.join(save_path + 'weights/', "{}_{:.4f}_val.tar".format(epoch + 1, val_auc))
             weight_dict[save_model_path] = val_auc
             torch.save({
