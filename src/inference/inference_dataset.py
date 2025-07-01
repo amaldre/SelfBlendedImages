@@ -39,6 +39,7 @@ def main(args):
     data_path = os.path.join(video_root, 'video_data.pkl')
     assert(os.path.exists(data_path))
     print("------Inference mode------")
+    print(f"Testing model {os.path.basename(args.weight_name)}")
     model=Detector()
     model=model.to(device)
     cnn_sd=torch.load(args.weight_name)["model"]
