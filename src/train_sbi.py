@@ -215,7 +215,7 @@ def main(args):
             }, save_model_path)
             last_val_auc = min([weight_dict[k] for k in weight_dict])
         elif val_auc >= last_val_auc:
-            save_model_path = os.path.join(save_path + 'weights/', "{}_{:.4f}_val.tar".format(epoch + 1, val_auc))
+            save_model_path = os.path.join(save_path + 'weights/', "{}_{:.6f}_val.tar".format(epoch + 1, val_auc))
             for k in weight_dict:
                 if weight_dict[k] == last_val_auc:
                     del weight_dict[k]
