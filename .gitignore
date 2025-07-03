@@ -4,8 +4,8 @@
 *.pth
 *.tar
 *.dat
-*.txt
 *.h5
+*.png
 
 sbi/
 wandb/
