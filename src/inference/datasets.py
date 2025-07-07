@@ -10,11 +10,12 @@ import pandas as pd
 
 
 def init_ff(dataset='all',phase='test'):
+	video_root = "FaceForensics++"
 	assert dataset in ['all','Deepfakes','Face2Face','FaceSwap','NeuralTextures']
-	original_path='data/FaceForensics++/original_sequences/youtube/raw/videos/'
+	original_path='/datasets/FaceForensics++/original_download/original_sequences/youtube/'
 	folder_list = sorted(glob(original_path+'*'))
 
-	list_dict = json.load(open(f'data/FaceForensics++/{phase}.json','r'))
+	list_dict = json.load(open(f'/datasets/FaceForensics++/original_download/splits/{phase}.json','r'))
 	filelist=[]
 	for i in list_dict:
 		filelist+=i
@@ -29,12 +30,13 @@ def init_ff(dataset='all',phase='test'):
 
 	folder_list=[]
 	for fake in fakes:
-		fake_path=f'data/FaceForensics++/manipulated_sequences/{fake}/raw/videos/'
+		fake_path=f'/datasets/FaceForensics++/original_download/manipulated_sequences/{fake}/'
 		folder_list_all=sorted(glob(fake_path+'*'))
 		folder_list+=[i for i in folder_list_all if os.path.basename(i)[:3] in filelist]
 	label_list+=[1]*len(folder_list)
 	image_list+=folder_list
-	return image_list,label_list
+	print(len(image_list))
+	return image_list,label_list,video_root
 
 
 
@@ -64,9 +66,6 @@ def init_dfdcp(phase='test'):
 
 	phase_integrated={'train':'train','val':'train','test':'test'}
 
-	all_img_list=[]
-	all_label_list=[]
-
 	with open('data/DFDCP/dataset.json') as f:
 		df=json.load(f)
 	fol_lab_list_all=[[f"data/DFDCP/{k.split('/')[0]}/videos/{k.split('/')[-1]}",df[k]['label']=='fake'] for k in df if df[k]['set']==phase_integrated[phase]]
@@ -94,7 +93,6 @@ def init_ffiw():
 
 def init_cdf():
 
-	image_list=[]
 	label_list=[]
 
 	video_list_txt='/home/alicia/dataShareID/CelebDFv2/List_of_testing_videos.txt'
@@ -110,6 +108,26 @@ def init_cdf():
 			folder_list+=['/home/alicia/dataShareID/CelebDFv2/'+path[0]+'/'+path[1]]
 			label_list+=[1-int(line[0])]
 		return folder_list, label_list, video_root
-		
+
+def read_custom_data(path_to_txt):
+	folder_list = []
+	label_list = []
+	with open(os.path.join(path_to_txt, "List_of_testing_videos.txt")) as f:
+		for data in f:
+			line = data.split()
+			path = line[1]
+			folder_list += [os.path.join(path_to_txt, path)]
+			label_list += [int(line[0])]
+	return folder_list, label_list
+
+def init_guy():
+	video_list_txt = '/home/alicia/GitW'
+	video_root = 'GitW'
+	folder_list, label_list = read_custom_data(video_list_txt)
+	print(len(label_list))
+	return folder_list, label_list, video_root
+
+	
+
 
 
