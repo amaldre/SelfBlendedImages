@@ -24,7 +24,7 @@ def main(args):
     if args.dataset == 'FFIW':
         video_list,target_list=init_ffiw()
     elif args.dataset == 'FF':
-        video_list,target_list=init_ff()
+        video_list,target_list, video_root=init_ff()
     elif args.dataset == 'DFD':
         video_list,target_list=init_dfd()
     elif args.dataset == 'DFDC':
@@ -33,6 +33,8 @@ def main(args):
         video_list,target_list=init_dfdcp()
     elif args.dataset == 'CDF':
         video_list,target_list, video_root=init_cdf()
+    elif args.dataset.upper() == 'GITW':
+        video_list, target_list, video_root = init_guy()
     else:
         NotImplementedError
 
@@ -74,8 +76,12 @@ def main(args):
             pred=0.5
         output_list.append(pred)
 
-    auc=roc_auc_score(target_list,output_list)
-
+    you_auc = True
+    try :
+        auc=roc_auc_score(target_list,output_list)
+    except: 
+        auc = None
+        you_auc = False
     # Convert output probabilities to binary predictions using a threshold (e.g., 0.5)
     binary_predictions = [1 if p >= 0.5 else 0 for p in output_list]
 
@@ -88,10 +94,12 @@ def main(args):
     # Calculate Average Recall
     avg_recall = recall_score(target_list, binary_predictions)
 
-
-    print(f'{args.dataset}| AUC: {auc:.4f}, Accuracy: {accuracy:.4f}, Avg Precision: {avg_precision:.4f}, Avg Recall: {avg_recall:.4f}')
-
-    if (args.plot):
+    if you_auc:
+        print(f'{args.dataset}| AUC: {auc:.4f}, Accuracy: {accuracy:.4f}, Avg Precision: {avg_precision:.4f}, Avg Recall: {avg_recall:.4f}')
+    else: 
+        print(f'{args.dataset}| AUC: N/A (only one label), Accuracy: {accuracy:.4f}, Avg Precision:  N/A (only one label), Avg Recall:  N/A (only one label)')
+    
+    if (args.plot and you_auc):
         # --- ROC Curve Plot ---
         fpr, tpr, thresholds = roc_curve(target_list, output_list)
         plt.figure(figsize=(8, 6))

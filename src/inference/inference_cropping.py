@@ -19,7 +19,7 @@ def main(args):
     if args.dataset == 'FFIW':
         video_list,target_list=init_ffiw()
     elif args.dataset == 'FF':
-        video_list,target_list=init_ff()
+        video_list,target_list, video_root=init_ff()
     elif args.dataset == 'DFD':
         video_list,target_list=init_dfd()
     elif args.dataset == 'DFDC':
@@ -28,6 +28,8 @@ def main(args):
         video_list,target_list=init_dfdcp()
     elif args.dataset == 'CDF':
         video_list,target_list, video_root=init_cdf()
+    elif args.dataset.upper() == 'GITW':
+        video_list, target_list, video_root = init_guy()
     else:
         NotImplementedError
 
