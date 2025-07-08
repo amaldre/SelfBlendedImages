@@ -98,7 +98,7 @@ def main(args):
         plt.ylabel('True Positive Rate (TPR)')
         plt.title(f'Receiver Operating Characteristic (ROC) Curve for {args.dataset}')
         plt.legend(loc="lower right")
-        roc_plot_filename = f'ROC_Curve_{args.dataset}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+        roc_plot_filename = f'ROC_Curve_{args.dataset}_{args.weight_name}.png'
         plt.savefig(os.path.join(plot_dir, 'ROC', roc_plot_filename))
         plt.close()
         print(f"ROC curve saved to {roc_plot_filename}")
@@ -114,7 +114,7 @@ def main(args):
         plt.ylabel('BPCER (False Negative Rate)')
         plt.title(f'BPCER vs. APCER for {args.dataset}')
         plt.legend(loc="upper right")
-        bpcer_apcer_plot_filename = f'BPCER_APCER_Plot_{args.dataset}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
+        bpcer_apcer_plot_filename = f'BPCER_APCER_Plot_{args.dataset}_{args.weight_name}.png'
         plt.savefig(os.path.join(plot_dir, 'bpcer_apcer', bpcer_apcer_plot_filename))
         plt.close()
         print(f"BPCER vs. APCER plot saved to {bpcer_apcer_plot_filename}")
