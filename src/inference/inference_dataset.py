@@ -98,7 +98,7 @@ def main(args):
         plt.ylabel('True Positive Rate (TPR)')
         plt.title(f'Receiver Operating Characteristic (ROC) Curve for {args.dataset}')
         plt.legend(loc="lower right")
-        roc_plot_filename = f'ROC_Curve_{args.dataset}_{args.weight_name}.png'
+        roc_plot_filename = f'ROC_Curve_{args.dataset}_{os.path.basename(args.weight_name)}.png'
         plt.savefig(os.path.join(plot_dir, 'ROC', roc_plot_filename))
         plt.close()
         print(f"ROC curve saved to {roc_plot_filename}")
@@ -115,7 +115,7 @@ def main(args):
         plt.ylabel('APCER (False Negative Rate)') # Y-axis is APCER
         plt.title(f'APCER vs. BPCER for {args.dataset}') # Title reflects order
         plt.legend(loc="upper right") # Adjust legend location as needed, often top-right for error curves
-        bpcer_apcer_plot_filename = f'APCER_BPCER_Plot_{args.dataset}_{args.weight_name}.png' # Consistent filename
+        bpcer_apcer_plot_filename = f'APCER_BPCER_Plot_{args.dataset}_{os.path.basename(args.weight_name)}.png' # Consistent filename
         plt.savefig(os.path.join(plot_dir, 'bpcer_apcer', bpcer_apcer_plot_filename))
         plt.close()
         print(f"APCER vs. BPCER plot saved to {bpcer_apcer_plot_filename}")
