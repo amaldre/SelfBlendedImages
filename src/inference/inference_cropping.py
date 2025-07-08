@@ -25,11 +25,10 @@ def main(args):
     if (os.path.exists(data_path)):
         print(f"a .pkl file already exists at {data_path}, please check if it was not intended")
     else:
-        os.mkdir(data_dir) 
+        os.makedirs(data_dir, exist_ok = True)  
         face_detector = get_model("resnet50_2020-07-20", max_size=2048,device=device)
         face_detector.eval()
         video_data = {}
-
         for filename in tqdm(video_list):
             video_data[filename] = {}
             face_list,idx_list=extract_frames(filename,args.n_frames,face_detector)
