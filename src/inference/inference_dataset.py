@@ -93,7 +93,7 @@ def main(args):
         plt.plot(fpr, tpr, color='blue', lw=2, label=f'ROC curve (AUC = {auc:.2f})')
         plt.plot([0, 1], [0, 1], color='gray', linestyle='--', lw=2, label='Random Classifier')
         plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
+        plt.ylim([0.0, 1.0])
         plt.xlabel('False Positive Rate (FPR)')
         plt.ylabel('True Positive Rate (TPR)')
         plt.title(f'Receiver Operating Characteristic (ROC) Curve for {args.dataset}')
@@ -104,20 +104,21 @@ def main(args):
         print(f"ROC curve saved to {roc_plot_filename}")
 
         # --- BPCER vs. APCER Plot ---
-        # APCER is FPR, BPCER is FNR (1 - TPR)
-        bpcer = 1 - tpr
+        bpcer_values = fpr  # BPCER is FPR
+        apcer_values = 1 - tpr # APCER is FNR (1 - TPR)
         plt.figure(figsize=(8, 6))
-        plt.plot(fpr, bpcer, color='red', lw=2, label='BPCER vs. APCER')
+        # Plot BPCER on x-axis and APCER on y-axis
+        plt.plot(bpcer_values, apcer_values, color='red', lw=2, label='APCER vs. BPCER')
         plt.xlim([0.0, 1.0])
-        plt.ylim([0.0, 1.05])
-        plt.xlabel('APCER (False Positive Rate)')
-        plt.ylabel('BPCER (False Negative Rate)')
-        plt.title(f'BPCER vs. APCER for {args.dataset}')
-        plt.legend(loc="upper right")
-        bpcer_apcer_plot_filename = f'BPCER_APCER_Plot_{args.dataset}_{args.weight_name}.png'
+        plt.ylim([0.0, 1.0])
+        plt.xlabel('BPCER (False Positive Rate)') # X-axis is BPCER
+        plt.ylabel('APCER (False Negative Rate)') # Y-axis is APCER
+        plt.title(f'APCER vs. BPCER for {args.dataset}') # Title reflects order
+        plt.legend(loc="upper right") # Adjust legend location as needed, often top-right for error curves
+        bpcer_apcer_plot_filename = f'APCER_BPCER_Plot_{args.dataset}_{args.weight_name}.png' # Consistent filename
         plt.savefig(os.path.join(plot_dir, 'bpcer_apcer', bpcer_apcer_plot_filename))
         plt.close()
-        print(f"BPCER vs. APCER plot saved to {bpcer_apcer_plot_filename}")
+        print(f"APCER vs. BPCER plot saved to {bpcer_apcer_plot_filename}")
     return auc, accuracy, avg_precision, avg_recall, target_list, output_list
 
 
