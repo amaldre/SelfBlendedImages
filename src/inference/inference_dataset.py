@@ -86,6 +86,7 @@ def main(args):
         print(f'{args.dataset}| AUC: N/A (only one label), Accuracy: {accuracy:.4f}, Avg Precision:  N/A (only one label), Avg Recall:  N/A (only one label)')
     
     if (args.plot and you_auc):
+        plot_dir = "figures"
         # --- ROC Curve Plot ---
         fpr, tpr, thresholds = roc_curve(target_list, output_list)
         plt.figure(figsize=(8, 6))
@@ -98,7 +99,7 @@ def main(args):
         plt.title(f'Receiver Operating Characteristic (ROC) Curve for {args.dataset}')
         plt.legend(loc="lower right")
         roc_plot_filename = f'ROC_Curve_{args.dataset}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
-        plt.savefig(roc_plot_filename)
+        plt.savefig(os.path.join(plot_dir, 'ROC', roc_plot_filename))
         plt.close()
         print(f"ROC curve saved to {roc_plot_filename}")
 
@@ -114,7 +115,7 @@ def main(args):
         plt.title(f'BPCER vs. APCER for {args.dataset}')
         plt.legend(loc="upper right")
         bpcer_apcer_plot_filename = f'BPCER_APCER_Plot_{args.dataset}_{datetime.now().strftime("%Y%m%d_%H%M%S")}.png'
-        plt.savefig(bpcer_apcer_plot_filename)
+        plt.savefig(os.path.join(plot_dir, 'bpcer_apcer', bpcer_apcer_plot_filename))
         plt.close()
         print(f"BPCER vs. APCER plot saved to {bpcer_apcer_plot_filename}")
     return auc, accuracy, avg_precision, avg_recall, target_list, output_list
