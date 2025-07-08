@@ -28,9 +28,9 @@ def init_dataset(dataset):
 		video_list, target_list, video_root = init_guy()
 	elif dataset.upper() == 'AKOOL':
 		video_list, target_list, video_root = init_akool()
-	elif dataset.uppper() == 'FFCM_SUBSET':
+	elif dataset.upper() == 'FFCM_SUBSET':
 		video_list, target_list, video_root = init_ffcm_subset()
-	elif dataset.uppper() == 'IBETA':
+	elif dataset.upper() == 'IBETA':
 		video_list, target_list, video_root = init_ibeta()
 	elif dataset.upper() == 'VIDNOZ':
 		video_list, target_list, video_root = init_vidnoz()
@@ -146,7 +146,7 @@ def read_custom_data(dataset_name, txt_name = 'List_of_testing_videos.txt'):
 		for data in f:
 			line = data.split()
 			path = line[1]
-			folder_list += [os.path.join(dataset_name, path)]
+			folder_list += [os.path.join(DATASHAREID, dataset_name, path)]
 			label_list += [int(line[0])]
 	return folder_list, label_list
 
@@ -163,7 +163,7 @@ def init_akool():
 	return folder_list, label_list, video_root
 
 def init_ffcm_subset():
-	video_root = 'ffcm_subset_test'
+	video_root = 'ffcm_subset_100'
 	folder_list, label_list = read_custom_data(video_root)
 	print(len(label_list))
 	return folder_list, label_list, video_root
