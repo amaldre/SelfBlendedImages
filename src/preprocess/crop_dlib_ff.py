@@ -75,7 +75,7 @@ def facecrop(org_path,save_path,face_detector,face_predictor,period=1,num_frames
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
-    parser.add_argument('-d',dest='dataset',choices=['DeepFakeDetection_original','DeepFakeDetection','FaceShifter','Face2Face','Deepfakes','FaceSwap','NeuralTextures','Original','Celeb-real','Celeb-synthesis','YouTube-real','DFDC','DFDCP'])
+    parser.add_argument('-d',dest='dataset',choices=['DeepFakeDetection_original','DeepFakeDetection','FaceShifter','Face2Face','Deepfakes','FaceSwap','NeuralTextures','Original','Celeb-real','Celeb-synthesis','YouTube-real','DFDC','DFDCP', 'gitw'])
     parser.add_argument('-c',dest='comp',choices=['raw','c23','c40'],default='raw')
     parser.add_argument('-n',dest='num_frames',type=int,default=32)
     args=parser.parse_args()
@@ -89,6 +89,8 @@ if __name__=='__main__':
         dataset_path='data/Celeb-DF-v2/{}/'.format(args.dataset)
     elif args.dataset in ['DFDC']:
         dataset_path='data/{}/'.format(args.dataset)
+    elif args.dataset.upper() == 'GITW':
+        dataset_path = '/home/alicia/dataShareID/GitW/'
     else:
         raise NotImplementedError
 
@@ -105,7 +107,13 @@ if __name__=='__main__':
 
     n_sample=len(movies_path_list)
 
-    SAVE_PATH = r"/datasets/FaceForensics++/sbi/"
+    if args.dataset=='Original': 
+        SAVE_PATH = r"/datasets/FaceForensics++/sbi/"
+    elif args.dataset.upper() == 'GITW':
+        SAVE_PATH = r"/home/alicia/SelfBlendedImages/"
+    else:
+        raise NotImplementedError
+    
     for i in tqdm(range(n_sample)):
         folder_path=movies_path_list[i].replace('videos/','frames/').replace('.mp4','/')
         facecrop(movies_path_list[i],save_path=SAVE_PATH,num_frames=args.num_frames,face_predictor=face_predictor,face_detector=face_detector)
