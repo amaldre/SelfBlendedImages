@@ -19,39 +19,59 @@ from tqdm import tqdm
 from retinaface.pre_trained_models import get_model
 from preprocess import extract_frames
 import warnings
+import cv2
 warnings.filterwarnings('ignore')
 
 def main(args):
 
-    model=Detector()
-    model=model.to(device)
-    cnn_sd=torch.load(args.weight_name)["model"]
+    model = Detector().to(device)
+    cnn_sd = torch.load(args.weight_name)["model"]
     model.load_state_dict(cnn_sd)
     model.eval()
 
-    face_detector = get_model("resnet50_2020-07-20", max_size=2048,device=device)
+    face_detector = get_model("resnet50_2020-07-20", max_size=2048, device=device)
     face_detector.eval()
 
-    face_list,idx_list=extract_frames(args.input_video,args.n_frames,face_detector)
+    # Already returns cropped face images and frame indices
+    face_list, idx_list = extract_frames(args.input_video, args.n_frames, face_detector)
 
+    # Infer
     with torch.no_grad():
-        img=torch.tensor(face_list).to(device).float()/255
-        pred=model(img).softmax(1)[:,1]
-        
-        
-    pred_list=[]
-    idx_img=-1
-    for i in range(len(pred)):
-        if idx_list[i]!=idx_img:
-            pred_list.append([])
-            idx_img=idx_list[i]
-        pred_list[-1].append(pred[i].item())
-    pred_res=np.zeros(len(pred_list))
-    for i in range(len(pred_res)):
-        pred_res[i]=max(pred_list[i])
-    pred=pred_res.mean()
+        img_tensor = torch.tensor(face_list).to(device).float() / 255
+        pred = model(img_tensor).softmax(1)[:, 1]  # Probability for class 1
 
-    print(f'fakeness: {pred:.4f}')
+    # Prepare output folder
+    video_name = os.path.splitext(os.path.basename(args.input_video))[0]
+    output_dir = os.path.join("figures", "crops", video_name)
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Save each cropped face with prediction written
+    for i in range(len(face_list)):
+        img = face_list[i]  # Shape: (C, H, W)
+        img_cv = img.transpose(1, 2, 0)  # (H, W, C)
+        img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
+
+        # Prediction score
+        score = pred[i].item()
+        label = f"Pred: {score:.4f}"
+
+        # Put text
+        position = (10, 30)
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 1
+        color = (0, 255, 0)
+        thickness = 2
+
+        cv2.putText(img_cv, label, position, font, font_scale, color, thickness, cv2.LINE_AA)
+
+        # Save
+        save_path = os.path.join(output_dir, f"{idx_list[i]}.png")
+        cv2.imwrite(save_path, img_cv)
+        print(f"Saved: {save_path}")
+
+    # Compute mean score
+    mean_pred = pred.mean().item()
+    print(f"Video fakeness score (mean): {mean_pred:.4f}")
 
 
 
@@ -74,6 +94,7 @@ if __name__=='__main__':
     parser.add_argument('-w',dest='weight_name',type=str)
     parser.add_argument('-i',dest='input_video',type=str)
     parser.add_argument('-n',dest='n_frames',default=32,type=int)
+    parser.add_argument('-f', action = 'store_true', dest='save_figure', default = False)
     args=parser.parse_args()
 
     main(args)
