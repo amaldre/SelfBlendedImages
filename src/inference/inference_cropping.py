@@ -9,6 +9,7 @@ from tqdm import tqdm
 from retinaface.pre_trained_models import get_model
 from preprocess import extract_frames
 from datasets import *
+from datasets import CROP_DIR
 from sklearn.metrics import confusion_matrix, roc_auc_score, accuracy_score, precision_score, recall_score, average_precision_score, roc_curve
 import warnings
 warnings.filterwarnings('ignore')
@@ -16,28 +17,15 @@ warnings.filterwarnings('ignore')
 import pickle
 
 def main(args):
-    if args.dataset == 'FFIW':
-        video_list,target_list=init_ffiw()
-    elif args.dataset == 'FF':
-        video_list,target_list, video_root=init_ff()
-    elif args.dataset == 'DFD':
-        video_list,target_list=init_dfd()
-    elif args.dataset == 'DFDC':
-        video_list,target_list=init_dfdc()
-    elif args.dataset == 'DFDCP':
-        video_list,target_list=init_dfdcp()
-    elif args.dataset == 'CDF':
-        video_list,target_list, video_root=init_cdf()
-    elif args.dataset.upper() == 'GITW':
-        video_list, target_list, video_root = init_guy()
-    else:
-        NotImplementedError
 
-    data_path = os.path.join(video_root, 'video_data.pkl')
+    video_list, _, video_root = init_dataset(args.dataset)
+    data_dir = os.path.join(CROP_DIR, video_root)
+    data_path = os.path.join(data_dir, 'video_data.pkl')
     print("------Cropping mode------")
     if (os.path.exists(data_path)):
         print(f"a .pkl file already exists at {data_path}, please check if it was not intended")
-    else: 
+    else:
+        os.mkdir(data_dir) 
         face_detector = get_model("resnet50_2020-07-20", max_size=2048,device=device)
         face_detector.eval()
         video_data = {}

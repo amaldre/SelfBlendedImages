@@ -8,6 +8,36 @@ from glob import glob
 import os
 import pandas as pd
 
+DATASHAREID = "/home/alicia/dataShareID"
+CROP_DIR = 'crop_data'
+
+def init_dataset(dataset):
+	if dataset == 'FFIW':
+		video_list,target_list=init_ffiw()
+	elif dataset == 'FF':
+		video_list,target_list, video_root=init_ff()
+	elif dataset == 'DFD':
+		video_list,target_list=init_dfd()
+	elif dataset == 'DFDC':
+		video_list,target_list=init_dfdc()
+	elif dataset == 'DFDCP':
+		video_list,target_list=init_dfdcp()
+	elif dataset == 'CDF':
+		video_list,target_list, video_root=init_cdf()
+	elif dataset.upper() == 'GITW':
+		video_list, target_list, video_root = init_guy()
+	elif dataset.upper() == 'AKOOL':
+		video_list, target_list, video_root = init_akool()
+	elif dataset.uppper() == 'FFCM_SUBSET':
+		video_list, target_list, video_root = init_ffcm_subset()
+	elif dataset.uppper() == 'IBETA':
+		video_list, target_list, video_root = init_ibeta()
+	elif dataset.upper() == 'VIDNOZ':
+		video_list, target_list, video_root = init_vidnoz()
+	else:
+		NotImplementedError
+	return video_list, target_list, video_root
+
 
 def init_ff(dataset='all',phase='test'):
 	video_root = "FaceForensics++"
@@ -109,25 +139,46 @@ def init_cdf():
 			label_list+=[1-int(line[0])]
 		return folder_list, label_list, video_root
 
-def read_custom_data(path_to_txt):
+def read_custom_data(dataset_name, txt_name = 'List_of_testing_videos.txt'):
 	folder_list = []
 	label_list = []
-	with open(os.path.join(path_to_txt, "List_of_testing_videos.txt")) as f:
+	with open(os.path.join(DATASHAREID, dataset_name, txt_name)) as f:
 		for data in f:
 			line = data.split()
 			path = line[1]
-			folder_list += [os.path.join(path_to_txt, path)]
+			folder_list += [os.path.join(dataset_name, path)]
 			label_list += [int(line[0])]
 	return folder_list, label_list
 
 def init_guy():
-	video_list_txt = '/home/alicia/GitW'
 	video_root = 'GitW'
-	folder_list, label_list = read_custom_data(video_list_txt)
+	folder_list, label_list = read_custom_data(video_root)
 	print(len(label_list))
 	return folder_list, label_list, video_root
 
-	
+def init_akool():
+	video_root = 'akool'
+	folder_list, label_list = read_custom_data(video_root, 'List_of_testing_videos_akool.txt')
+	print(len(label_list))
+	return folder_list, label_list, video_root
+
+def init_ffcm_subset():
+	video_root = 'ffcm_subset_test'
+	folder_list, label_list = read_custom_data(video_root)
+	print(len(label_list))
+	return folder_list, label_list, video_root
+
+def init_ibeta():
+	video_root = 'ibeta'
+	folder_list, label_list = read_custom_data(video_root, "List_of_testing_videos_ibeta.txt")
+	print(len(label_list))
+	return folder_list, label_list, video_root
+
+def init_vidnoz():
+	video_root = 'vidnoz'
+	folder_list, label_list = read_custom_data(video_root, "List_of_testing_videos_vidnoz.txt")
+	print(len(label_list))
+	return folder_list, label_list, video_root
 
 
 
