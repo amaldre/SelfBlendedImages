@@ -6,6 +6,7 @@
 *.dat
 *.h5
 *.png
+*.zip
 
 sbi/
 wandb/
