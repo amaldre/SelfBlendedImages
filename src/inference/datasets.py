@@ -35,6 +35,7 @@ def init_dataset(dataset):
 	elif dataset.upper() == 'VIDNOZ':
 		video_list, target_list, video_root = init_vidnoz()
 	else:
+		print(dataset)
 		NotImplementedError
 	return video_list, target_list, video_root
 

@@ -19,7 +19,7 @@ warnings.filterwarnings('ignore')
 
 import pickle
 
-DATASETS = ['gitw', 'akool', 'ibeta']
+DATASETS = ['akool', 'ibeta', 'vidnoz', 'ffcm_subset', 'gitw', 'FF', 'CDF']
 
 def main(args):
     device = torch.device('cuda')
@@ -145,3 +145,4 @@ if __name__=='__main__':
     args=parser.parse_args()
 
     main(args)
+    #raw ['akool', 'ibeta', 'vidnoz', 'ffcm_subset', 'gitw', 'FF', 'CDF']| AUC: 0.8387, Accuracy: 0.7353, Avg Precision: 0.9288, Avg Recall: 0.6939

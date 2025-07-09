@@ -5,6 +5,6 @@
     "image_size":380,
     "use_wandb": 1,
     "lr": 0.001,
-    "val_datasets": ["CDF"],
-    "val_every": 5
+    "test_datasets": ["FF","CDF"],
+    "test_every": 5
 }
