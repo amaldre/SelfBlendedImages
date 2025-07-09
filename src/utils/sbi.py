@@ -134,6 +134,8 @@ class SBI_Dataset(Dataset):
 				img_f = self.final_transforms(img_f)
 				img_r = self.final_transforms(img_r)
 				
+				img_f = img_f.numpy()
+				img_r = img_r.numpy()
 				flag=False
 			except Exception as e:
 				print(e)
