@@ -65,7 +65,7 @@ class SBI_Dataset(Dataset):
 
 		self.transforms=self.get_transforms()
 		self.source_transforms = self.get_source_transforms()
-
+		self.final_transforms = get_final_transforms()
 
 	def __len__(self):
 		return len(self.image_list)
@@ -122,10 +122,18 @@ class SBI_Dataset(Dataset):
 				#Resize to config size
 				img_f=cv2.resize(img_f,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
 				img_r=cv2.resize(img_r,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
-				
+
 				#Transpose
 				img_f=img_f.transpose((2,0,1))
 				img_r=img_r.transpose((2,0,1))
+
+				#Apply final transforms
+				img_f = torch.from_numpy(img_f) 
+				img_r = torch.from_numpy(img_r)
+
+				img_f = self.final_transforms(img_f)
+				img_r = self.final_transforms(img_r)
+				
 				flag=False
 			except Exception as e:
 				print(e)
@@ -133,8 +141,6 @@ class SBI_Dataset(Dataset):
 				idx=torch.randint(low=0,high=len(self),size=(1,)).item()
 		
 		return img_f,img_r
-
-	
 		
 	def get_source_transforms(self):
 		return alb.Compose([
@@ -296,6 +302,9 @@ class SBI_Dataset(Dataset):
 
 	def worker_init_fn(self,worker_id):                                                          
 		np.random.seed(np.random.get_state()[1][0] + worker_id)
+
+def get_final_transforms():
+	return transforms.Lambda(lambda img: img * 2.0 - 1.0)
 
 if __name__=='__main__':
 	import blend as B

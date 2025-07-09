@@ -146,3 +146,5 @@ if __name__=='__main__':
 
     main(args)
     #raw ['akool', 'ibeta', 'vidnoz', 'ffcm_subset', 'gitw', 'FF', 'CDF']| AUC: 0.8387, Accuracy: 0.7353, Avg Precision: 0.9288, Avg Recall: 0.6939
+    #c23 ['akool', 'ibeta', 'vidnoz', 'ffcm_subset', 'gitw', 'FF', 'CDF']| AUC: 0.8175, Accuracy: 0.7253, Avg Precision: 0.9179, Avg Recall: 0.6939
+    #77  ['akool', 'ibeta', 'vidnoz', 'ffcm_subset', 'gitw', 'FF', 'CDF']| AUC: 0.8061, Accuracy: 0.7132, Avg Precision: 0.9125, Avg Recall: 0.6857
