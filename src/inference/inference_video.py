@@ -42,7 +42,7 @@ def main(args):
 
     # Prepare output folder
     video_name = os.path.splitext(os.path.basename(args.input_video))[0]
-    output_dir = os.path.join("figures", "crops", video_name)
+    output_dir = os.path.join("figures", "crops", video_name,  os.path.splitext(os.path.basename(args.weight_name))[0])
     os.makedirs(output_dir, exist_ok=True)
 
     # Save each cropped face with prediction written
