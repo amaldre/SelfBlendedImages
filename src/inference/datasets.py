@@ -10,6 +10,7 @@ import pandas as pd
 
 DATASHAREID = "/home/alicia/dataShareID"
 CROP_DIR = 'crop_data'
+VID_EXTENSIONS = {'.mp4', '.mov', '.avi'}
 
 def init_dataset(dataset):
 	if dataset == 'FFIW':
@@ -36,6 +37,10 @@ def init_dataset(dataset):
 		video_list, target_list, video_root = init_vidnoz()
 	elif dataset.upper() == 'ALEXANDRE':
 		video_list, target_list, video_root = init_alexandre()
+	elif dataset.upper() == 'ALEXANDRE_PRISTINE':
+		video_list, target_list, video_root = init_alexandre_pristine()
+	elif dataset.upper() == 'TEAM':
+		video_list, target_list, video_root = init_team() 
 	else:
 		print(dataset)
 		NotImplementedError
@@ -183,12 +188,22 @@ def init_vidnoz():
 	print(len(label_list))
 	return folder_list, label_list, video_root
 
-def init_alexandre():
-	video_root = 'alexandre'
+def init_custom_folder(video_root, label):
 	folder_path = os.path.join(DATASHAREID, video_root)
-	folder_list = [os.path.join(folder_path, video) for video in os.listdir(folder_path) if os.path.splitext(video)[1].lower() in {".mp4"}]
-	label_list = [1] * len(folder_list)
+	folder_list = [os.path.join(folder_path, video) for video in os.listdir(folder_path) if os.path.splitext(video)[1].lower() in VID_EXTENSIONS]
+	label_list = [label] * len(folder_list)
 	return folder_list, label_list, video_root
 
+def init_alexandre():
+	video_root = 'alexandre'
+	return init_custom_folder(video_root, 1)
 
+def init_alexandre_pristine():
+	video_root = 'alexandre_pristine'
+	return init_custom_folder(video_root, 0)
 
+def init_team():
+	video_root = 'ShareIDTeam'
+	return init_custom_folder(video_root, 0)
+#91
+#alexandre| AUC: N/A (only one label), Accuracy: 0.0909, Avg Precision:  N/A (only one label), Avg Recall:  N/A (only one label)
