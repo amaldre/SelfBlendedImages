@@ -34,6 +34,8 @@ def init_dataset(dataset):
 		video_list, target_list, video_root = init_ibeta()
 	elif dataset.upper() == 'VIDNOZ':
 		video_list, target_list, video_root = init_vidnoz()
+	elif dataset.upper() == 'ALEXANDRE':
+		video_list, target_list, video_root = init_alexandre()
 	else:
 		print(dataset)
 		NotImplementedError
@@ -179,6 +181,13 @@ def init_vidnoz():
 	video_root = 'vidnoz'
 	folder_list, label_list = read_custom_data(video_root, "List_of_testing_videos_vidnoz.txt")
 	print(len(label_list))
+	return folder_list, label_list, video_root
+
+def init_alexandre():
+	video_root = 'alexandre'
+	folder_path = os.path.join(DATASHAREID, video_root)
+	folder_list = [os.path.join(folder_path, video) for video in os.listdir(folder_path) if os.path.splitext(video)[1].lower() in {".mp4"}]
+	label_list = [1] * len(folder_list)
 	return folder_list, label_list, video_root
 
 
