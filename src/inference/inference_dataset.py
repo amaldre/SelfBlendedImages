@@ -36,6 +36,7 @@ def main(args):
     output_list=[]
     with open(data_path, 'rb') as f:
         video_data = pickle.load(f)
+    count = 0
     for filename in tqdm(video_data.keys()):
         try:
             face_list = video_data[filename]['face_list'] 
@@ -61,7 +62,8 @@ def main(args):
             print(e)
             pred=0.5
         output_list.append(pred)
-        print(f"{filename}: {pred}, actual: {target_list[idx_list]}")
+        print(f"{filename}: {pred}, actual: {target_list[count]}")
+        count += 1
 
     you_auc = True
     try :
