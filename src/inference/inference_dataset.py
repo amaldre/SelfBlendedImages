@@ -61,6 +61,7 @@ def main(args):
             print(e)
             pred=0.5
         output_list.append(pred)
+        print(f"{filename}: {pred}, actual: {target_list[idx_list]}")
 
     you_auc = True
     try :
@@ -137,7 +138,8 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument('-w',dest='weight_name',type=str)
     parser.add_argument('-d',dest='dataset',type=str)
-    parser.add_argument('-p', dest='plot', default = False)
+    parser.add_argument('-plot', dest='plot', action = 'store_true', default = False)
+    parser.add_argument('-print', dest='print', action = 'store_true', default = False)
     args=parser.parse_args()
 
     main(args)
