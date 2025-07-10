@@ -9,6 +9,7 @@
 *.zip
 
 sbi/
+sbi3.9/
 wandb/
 output/
 crop_data/
