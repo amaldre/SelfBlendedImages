@@ -21,8 +21,12 @@ from preprocess import extract_frames
 import warnings
 import cv2
 warnings.filterwarnings('ignore')
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+from utils.sbi import get_final_transforms
 
 def main(args):
+
+    final_transforms = get_final_transforms()
 
     model = Detector().to(device)
     cnn_sd = torch.load(args.weight_name)["model"]
@@ -38,16 +42,18 @@ def main(args):
     # Infer
     with torch.no_grad():
         img_tensor = torch.tensor(face_list).to(device).float() / 255
+        for i in range(img_tensor.shape[0]):
+            img_tensor[i] = final_transforms(img_tensor[i])
         pred = model(img_tensor).softmax(1)[:, 1]  # Probability for class 1
 
     # Prepare output folder
     video_name = os.path.splitext(os.path.basename(args.input_video))[0]
     output_dir = os.path.join("figures", "crops", video_name)
     os.makedirs(output_dir, exist_ok=True)
-
     # Save each cropped face with prediction written
     for i in range(len(face_list)):
         img = face_list[i]  # Shape: (C, H, W)
+
         img_cv = img.transpose(1, 2, 0)  # (H, W, C)
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
 
