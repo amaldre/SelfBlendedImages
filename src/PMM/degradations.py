@@ -356,7 +356,7 @@ def add_resize(img, sf=4):
     if rnum > 0.8:  # up
         sf1 = random.uniform(1, 2)
     elif rnum < 0.7:  # down
-        sf1 = random.uniform(0.5/sf, 1)
+        sf1 = random.uniform(0.25/sf, 1)
     else:
         sf1 = 1.0
     img = cv2.resize(img, (int(sf1*img.shape[1]), int(sf1*img.shape[0])), interpolation=random.choice([1, 2, 3]))
