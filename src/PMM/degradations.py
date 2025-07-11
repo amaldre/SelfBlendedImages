@@ -11,7 +11,7 @@ import scipy
 import scipy.stats as ss
 from scipy.interpolate import interp2d
 from scipy.linalg import orth
-
+from PIL import Image, ImageEnhance
 
 
 
@@ -422,6 +422,28 @@ def add_JPEG_noise(img):
     img = cv2.cvtColor(util.uint2single(img), cv2.COLOR_BGR2RGB)
     return img
 
+def enhance(img):
+    # Convert to PIL image
+    img_pil = Image.fromarray((img * 255).astype(np.uint8))
+
+    # Choose enhancement type
+    if random.random() < 0.5:
+        enhancer = ImageEnhance.Brightness(img_pil)
+    else:
+        enhancer = ImageEnhance.Contrast(img_pil)
+
+    # Sample factor from Uniform(0.5, 1.5)
+    factor = random.uniform(0.5, 1.5)
+
+    # Enhance
+    img_enhanced_pil = enhancer.enhance(factor)
+
+    # Convert back to NumPy array and normalize to [0, 1]
+    img_enhanced_np = np.asarray(img_enhanced_pil).astype(np.float32) / 255.0
+
+    return img_enhanced_np
+
+
 
 # def random_crop(lq, hq, sf=4, lq_patchsize=64):
 #     h, w = lq.shape[:2]
@@ -571,7 +593,7 @@ def degradation(img, sf=4, lq_patchsize=64):
             img = add_JPEG_noise(img)
         #TODO Enhance!
         elif i == 6 and random.random() < p:
-            print("hello")
+            img = enhance(img)
         #TODO Distractors
         elif i == 7 and random.random() < p:
             print("lol")
