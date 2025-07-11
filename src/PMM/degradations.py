@@ -449,6 +449,7 @@ def add_distractors(img, p_d):
         if random.choice() < 0.5:
             img = add_text(img)
         else:
+            img_to_add = choose_image()
             img = add_image(img)
         n += 1
     return img
@@ -466,7 +467,18 @@ def add_text(img):
     line_type = random.randint(0, 2)
     cv2.putText(img, text, (x, y), font, font_scale, color, thickness, line_type)
 
-def add_image(img):
+def add_image(img, img_to_add):
+    x = random.randint(20, 100)
+    y = int(random.uniform(0.8 * x, 1.2 * x))
+    
+    img_to_add_resized = cv2.resize(img_to_add (x, y))
+
+    height, width = img.shape[: 2]
+
+    X = random.randint(0, max(0, width - x))
+    Y = random.randint(0, max(0, height - y))
+
+    img[Y:Y + y, X:X + x] = img_to_add_resized 
     return img
 
 
