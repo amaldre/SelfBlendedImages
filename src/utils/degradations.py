@@ -474,7 +474,7 @@ def add_distractors(img, image_list, p_d):
             img = add_text(img)
         else:
             img_to_add = choose_image(image_list)
-            img = add_image(img)
+            img = add_image(img, img_to_add)
         n += 1
     return img
 
