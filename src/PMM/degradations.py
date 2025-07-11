@@ -381,7 +381,7 @@ def add_Gaussian_noise(img, noise_level1=2, noise_level2=25):
     img = np.clip(img, 0.0, 1.0)
     return img
 
-
+#TODO figure out what to do with this
 def add_speckle_noise(img, noise_level1=2, noise_level2=25):
     noise_level = random.randint(noise_level1, noise_level2)
     img = np.clip(img, 0.0, 1.0)
@@ -548,28 +548,32 @@ def degradation(img, sf=4, lq_patchsize=64):
 
     hq = img.copy()
 
-    shuffle_order = random.sample(range(6), 6)
+    shuffle_order = random.sample(range(7), 7)
 
     p = 0.5
     for i in shuffle_order:
-        if i == 0 and random.random() < 0.5:
+        if i == 0 and random.random() < p:
             img = add_blur(img, sf=sf)
-        elif i == 1 and random.random() < 0.5:
+        elif i == 1 and random.random() < p:
             img = add_resize(img, sf=sf)
-        elif i == 2 and random.random() < 0.5:
-            img = add_Gaussian_noise(img, noise_level1=2, noise_level2=25)
-        elif i == 3 and random.random() < 0.5:
+        elif i == 2 and random.random() < p/2:
+            l1 = 2, l2 = 100
+            img = add_Gaussian_noise(img, noise_level1=l1 * sf, noise_level2=l2 * sf)
+        elif i == 3 and random.random() < p/2:
+            l1 = 80, l2 = 100
+            img = add_Gaussian_noise(img, noise_level1=l1 * sf, noise_level2=l2 * sf)
+        elif i == 4 and random.random() < p:
             if random.random() < 0.5:
                 img = add_Poisson_noise(img)
             else:
                 img = add_speckle_noise(img)
-        elif i == 4 and random.random() < 0.5:
+        elif i == 5 and random.random() < p:
             img = add_JPEG_noise(img)
         #TODO Enhance!
-        elif i == 5 and random.random() < 0.5:
+        elif i == 6 and random.random() < p:
             print("hello")
         #TODO Distractors
-        elif i == 6 and random.random() < 0.5:
+        elif i == 7 and random.random() < p:
             print("lol")
         else:
             print('check the shuffle!')
