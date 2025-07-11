@@ -144,7 +144,6 @@ def main(args):
             train_probs.append(probs[:, 1].detach().cpu())  # Assuming binary classification
             train_targets.append(target.detach().cpu())
 
-        lr_scheduler.step()
         train_losses.append(train_loss / len(train_loader))
         train_accs.append(train_acc / len(train_loader))
 
@@ -192,7 +191,7 @@ def main(args):
             val_acc / len(val_loader),
             val_auc
         )
-
+        
         if USE_WANDB:
             wandb.log({
                 'Val/Loss': val_loss / len(val_loader),
@@ -201,8 +200,11 @@ def main(args):
                 'Train/Loss': train_loss / len(train_loader),
                 'Train/Accuracy': train_acc / len(train_loader),
                 'Train/AUC': train_auc,
+                'Train/LearningRate': model.optimizer.param_groups[0]['lr'],
                 'epoch': epoch
             })
+
+        lr_scheduler.step()
 
 
         if len(weight_dict) < n_weight or epoch == n_epoch - 1:
