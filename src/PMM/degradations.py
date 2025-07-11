@@ -45,20 +45,20 @@ def modcrop_np(img, sf):
 # anisotropic Gaussian kernels
 # --------------------------------------------
 """
-def analytic_kernel(k):
-    """Calculate the X4 kernel from the X2 kernel (for proof see appendix in paper)"""
-    k_size = k.shape[0]
-    # Calculate the big kernels size
-    big_k = np.zeros((3 * k_size - 2, 3 * k_size - 2))
-    # Loop over the small kernel to fill the big one
-    for r in range(k_size):
-        for c in range(k_size):
-            big_k[2 * r:2 * r + k_size, 2 * c:2 * c + k_size] += k[r, c] * k
-    # Crop the edges of the big kernel to ignore very small values and increase run time of SR
-    crop = k_size // 2
-    cropped_big_k = big_k[crop:-crop, crop:-crop]
-    # Normalize to 1
-    return cropped_big_k / cropped_big_k.sum()
+# def analytic_kernel(k):
+#     """Calculate the X4 kernel from the X2 kernel (for proof see appendix in paper)"""
+#     k_size = k.shape[0]
+#     # Calculate the big kernels size
+#     big_k = np.zeros((3 * k_size - 2, 3 * k_size - 2))
+#     # Loop over the small kernel to fill the big one
+#     for r in range(k_size):
+#         for c in range(k_size):
+#             big_k[2 * r:2 * r + k_size, 2 * c:2 * c + k_size] += k[r, c] * k
+#     # Crop the edges of the big kernel to ignore very small values and increase run time of SR
+#     crop = k_size // 2
+#     cropped_big_k = big_k[crop:-crop, crop:-crop]
+#     # Normalize to 1
+#     return cropped_big_k / cropped_big_k.sum()
 
 
 def anisotropic_Gaussian(ksize=15, theta=np.pi, l1=6, l2=6):
@@ -96,33 +96,33 @@ def gm_blur_kernel(mean, cov, size=15):
     return k
 
 
-def shift_pixel(x, sf, upper_left=True):
-    """shift pixel for super-resolution with different scale factors
-    Args:
-        x: WxHxC or WxH
-        sf: scale factor
-        upper_left: shift direction
-    """
-    h, w = x.shape[:2]
-    shift = (sf-1)*0.5
-    xv, yv = np.arange(0, w, 1.0), np.arange(0, h, 1.0)
-    if upper_left:
-        x1 = xv + shift
-        y1 = yv + shift
-    else:
-        x1 = xv - shift
-        y1 = yv - shift
+# def shift_pixel(x, sf, upper_left=True):
+#     """shift pixel for super-resolution with different scale factors
+#     Args:
+#         x: WxHxC or WxH
+#         sf: scale factor
+#         upper_left: shift direction
+#     """
+#     h, w = x.shape[:2]
+#     shift = (sf-1)*0.5
+#     xv, yv = np.arange(0, w, 1.0), np.arange(0, h, 1.0)
+#     if upper_left:
+#         x1 = xv + shift
+#         y1 = yv + shift
+#     else:
+#         x1 = xv - shift
+#         y1 = yv - shift
 
-    x1 = np.clip(x1, 0, w-1)
-    y1 = np.clip(y1, 0, h-1)
+#     x1 = np.clip(x1, 0, w-1)
+#     y1 = np.clip(y1, 0, h-1)
 
-    if x.ndim == 2:
-        x = interp2d(xv, yv, x)(x1, y1)
-    if x.ndim == 3:
-        for i in range(x.shape[-1]):
-            x[:, :, i] = interp2d(xv, yv, x[:, :, i])(x1, y1)
+#     if x.ndim == 2:
+#         x = interp2d(xv, yv, x)(x1, y1)
+#     if x.ndim == 3:
+#         for i in range(x.shape[-1]):
+#             x[:, :, i] = interp2d(xv, yv, x[:, :, i])(x1, y1)
 
-    return x
+#     return x
 
 
 def blur(x, k):
@@ -143,46 +143,46 @@ def blur(x, k):
 
 
 
-def gen_kernel(k_size=np.array([15, 15]), scale_factor=np.array([4, 4]), min_var=0.6, max_var=10., noise_level=0):
-    """"
-    # modified version of https://github.com/assafshocher/BlindSR_dataset_generator
-    # Kai Zhang
-    # min_var = 0.175 * sf  # variance of the gaussian kernel will be sampled between min_var and max_var
-    # max_var = 2.5 * sf
-    """
-    # Set random eigen-vals (lambdas) and angle (theta) for COV matrix
-    lambda_1 = min_var + np.random.rand() * (max_var - min_var)
-    lambda_2 = min_var + np.random.rand() * (max_var - min_var)
-    theta = np.random.rand() * np.pi  # random theta
-    noise = -noise_level + np.random.rand(*k_size) * noise_level * 2
+# def gen_kernel(k_size=np.array([15, 15]), scale_factor=np.array([4, 4]), min_var=0.6, max_var=10., noise_level=0):
+#     """"
+#     # modified version of https://github.com/assafshocher/BlindSR_dataset_generator
+#     # Kai Zhang
+#     # min_var = 0.175 * sf  # variance of the gaussian kernel will be sampled between min_var and max_var
+#     # max_var = 2.5 * sf
+#     """
+#     # Set random eigen-vals (lambdas) and angle (theta) for COV matrix
+#     lambda_1 = min_var + np.random.rand() * (max_var - min_var)
+#     lambda_2 = min_var + np.random.rand() * (max_var - min_var)
+#     theta = np.random.rand() * np.pi  # random theta
+#     noise = -noise_level + np.random.rand(*k_size) * noise_level * 2
 
-    # Set COV matrix using Lambdas and Theta
-    LAMBDA = np.diag([lambda_1, lambda_2])
-    Q = np.array([[np.cos(theta), -np.sin(theta)],
-                  [np.sin(theta), np.cos(theta)]])
-    SIGMA = Q @ LAMBDA @ Q.T
-    INV_SIGMA = np.linalg.inv(SIGMA)[None, None, :, :]
+#     # Set COV matrix using Lambdas and Theta
+#     LAMBDA = np.diag([lambda_1, lambda_2])
+#     Q = np.array([[np.cos(theta), -np.sin(theta)],
+#                   [np.sin(theta), np.cos(theta)]])
+#     SIGMA = Q @ LAMBDA @ Q.T
+#     INV_SIGMA = np.linalg.inv(SIGMA)[None, None, :, :]
 
-    # Set expectation position (shifting kernel for aligned image)
-    MU = k_size // 2 - 0.5*(scale_factor - 1) # - 0.5 * (scale_factor - k_size % 2)
-    MU = MU[None, None, :, None]
+#     # Set expectation position (shifting kernel for aligned image)
+#     MU = k_size // 2 - 0.5*(scale_factor - 1) # - 0.5 * (scale_factor - k_size % 2)
+#     MU = MU[None, None, :, None]
 
-    # Create meshgrid for Gaussian
-    [X,Y] = np.meshgrid(range(k_size[0]), range(k_size[1]))
-    Z = np.stack([X, Y], 2)[:, :, :, None]
+#     # Create meshgrid for Gaussian
+#     [X,Y] = np.meshgrid(range(k_size[0]), range(k_size[1]))
+#     Z = np.stack([X, Y], 2)[:, :, :, None]
 
-    # Calcualte Gaussian for every pixel of the kernel
-    ZZ = Z-MU
-    ZZ_t = ZZ.transpose(0,1,3,2)
-    raw_kernel = np.exp(-0.5 * np.squeeze(ZZ_t @ INV_SIGMA @ ZZ)) * (1 + noise)
+#     # Calcualte Gaussian for every pixel of the kernel
+#     ZZ = Z-MU
+#     ZZ_t = ZZ.transpose(0,1,3,2)
+#     raw_kernel = np.exp(-0.5 * np.squeeze(ZZ_t @ INV_SIGMA @ ZZ)) * (1 + noise)
 
-    # shift the kernel so it will be centered
-    #raw_kernel_centered = kernel_shift(raw_kernel, scale_factor)
+#     # shift the kernel so it will be centered
+#     #raw_kernel_centered = kernel_shift(raw_kernel, scale_factor)
 
-    # Normalize the kernel and return
-    #kernel = raw_kernel_centered / np.sum(raw_kernel_centered)
-    kernel = raw_kernel / np.sum(raw_kernel)
-    return kernel
+#     # Normalize the kernel and return
+#     #kernel = raw_kernel_centered / np.sum(raw_kernel_centered)
+#     kernel = raw_kernel / np.sum(raw_kernel)
+#     return kernel
 
 
 def fspecial_gaussian(hsize, sigma):
@@ -199,13 +199,13 @@ def fspecial_gaussian(hsize, sigma):
     return h
 
 
-def fspecial_laplacian(alpha):
-    alpha = max([0, min([alpha,1])])
-    h1 = alpha/(alpha+1)
-    h2 = (1-alpha)/(alpha+1)
-    h = [[h1, h2, h1], [h2, -4/(alpha+1), h2], [h1, h2, h1]]
-    h = np.array(h)
-    return h
+# def fspecial_laplacian(alpha):
+#     alpha = max([0, min([alpha,1])])
+#     h1 = alpha/(alpha+1)
+#     h2 = (1-alpha)/(alpha+1)
+#     h = [[h1, h2, h1], [h2, -4/(alpha+1), h2], [h1, h2, h1]]
+#     h = np.array(h)
+#     return h
 
 
 def fspecial(filter_type, *args, **kwargs):
@@ -215,8 +215,8 @@ def fspecial(filter_type, *args, **kwargs):
     '''
     if filter_type == 'gaussian':
         return fspecial_gaussian(*args, **kwargs)
-    if filter_type == 'laplacian':
-        return fspecial_laplacian(*args, **kwargs)
+    # if filter_type == 'laplacian':
+    #     return fspecial_laplacian(*args, **kwargs)
 
 """
 # --------------------------------------------
@@ -225,124 +225,129 @@ def fspecial(filter_type, *args, **kwargs):
 """
 
 
-def bicubic_degradation(x, sf=3):
-    '''
-    Args:
-        x: HxWxC image, [0, 1]
-        sf: down-scale factor
+# def bicubic_degradation(x, sf=3):
+#     '''
+#     Args:
+#         x: HxWxC image, [0, 1]
+#         sf: down-scale factor
 
-    Return:
-        bicubicly downsampled LR image
-    '''
-    x = util.imresize_np(x, scale=1/sf)
-    return x
-
-
-def srmd_degradation(x, k, sf=3):
-    ''' blur + bicubic downsampling
-
-    Args:
-        x: HxWxC image, [0, 1]
-        k: hxw, double
-        sf: down-scale factor
-
-    Return:
-        downsampled LR image
-
-    Reference:
-        @inproceedings{zhang2018learning,
-          title={Learning a single convolutional super-resolution network for multiple degradations},
-          author={Zhang, Kai and Zuo, Wangmeng and Zhang, Lei},
-          booktitle={IEEE Conference on Computer Vision and Pattern Recognition},
-          pages={3262--3271},
-          year={2018}
-        }
-    '''
-    x = ndimage.filters.convolve(x, np.expand_dims(k, axis=2), mode='wrap')  # 'nearest' | 'mirror'
-    x = bicubic_degradation(x, sf=sf)
-    return x
+#     Return:
+#         bicubicly downsampled LR image
+#     '''
+#     x = util.imresize_np(x, scale=1/sf)
+#     return x
 
 
-def dpsr_degradation(x, k, sf=3):
+# def srmd_degradation(x, k, sf=3):
+#     ''' blur + bicubic downsampling
 
-    ''' bicubic downsampling + blur
+#     Args:
+#         x: HxWxC image, [0, 1]
+#         k: hxw, double
+#         sf: down-scale factor
 
-    Args:
-        x: HxWxC image, [0, 1]
-        k: hxw, double
-        sf: down-scale factor
+#     Return:
+#         downsampled LR image
 
-    Return:
-        downsampled LR image
-
-    Reference:
-        @inproceedings{zhang2019deep,
-          title={Deep Plug-and-Play Super-Resolution for Arbitrary Blur Kernels},
-          author={Zhang, Kai and Zuo, Wangmeng and Zhang, Lei},
-          booktitle={IEEE Conference on Computer Vision and Pattern Recognition},
-          pages={1671--1681},
-          year={2019}
-        }
-    '''
-    x = bicubic_degradation(x, sf=sf)
-    x = ndimage.filters.convolve(x, np.expand_dims(k, axis=2), mode='wrap')
-    return x
-
-
-def classical_degradation(x, k, sf=3):
-    ''' blur + downsampling
-
-    Args:
-        x: HxWxC image, [0, 1]/[0, 255]
-        k: hxw, double
-        sf: down-scale factor
-
-    Return:
-        downsampled LR image
-    '''
-    x = ndimage.filters.convolve(x, np.expand_dims(k, axis=2), mode='wrap')
-    #x = filters.correlate(x, np.expand_dims(np.flip(k), axis=2))
-    st = 0
-    return x[st::sf, st::sf, ...]
+#     Reference:
+#         @inproceedings{zhang2018learning,
+#           title={Learning a single convolutional super-resolution network for multiple degradations},
+#           author={Zhang, Kai and Zuo, Wangmeng and Zhang, Lei},
+#           booktitle={IEEE Conference on Computer Vision and Pattern Recognition},
+#           pages={3262--3271},
+#           year={2018}
+#         }
+#     '''
+#     x = ndimage.filters.convolve(x, np.expand_dims(k, axis=2), mode='wrap')  # 'nearest' | 'mirror'
+#     x = bicubic_degradation(x, sf=sf)
+    # return x
 
 
-def add_sharpening(img, weight=0.5, radius=50, threshold=10):
-    """USM sharpening. borrowed from real-ESRGAN
-    Input image: I; Blurry image: B.
-    1. K = I + weight * (I - B)
-    2. Mask = 1 if abs(I - B) > threshold, else: 0
-    3. Blur mask:
-    4. Out = Mask * K + (1 - Mask) * I
-    Args:
-        img (Numpy array): Input image, HWC, BGR; float32, [0, 1].
-        weight (float): Sharp weight. Default: 1.
-        radius (float): Kernel size of Gaussian blur. Default: 50.
-        threshold (int):
-    """
-    if radius % 2 == 0:
-        radius += 1
-    blur = cv2.GaussianBlur(img, (radius, radius), 0)
-    residual = img - blur
-    mask = np.abs(residual) * 255 > threshold
-    mask = mask.astype('float32')
-    soft_mask = cv2.GaussianBlur(mask, (radius, radius), 0)
+# def dpsr_degradation(x, k, sf=3):
 
-    K = img + weight * residual
-    K = np.clip(K, 0, 1)
-    return soft_mask * K + (1 - soft_mask) * img
+#     ''' bicubic downsampling + blur
 
+#     Args:
+#         x: HxWxC image, [0, 1]
+#         k: hxw, double
+#         sf: down-scale factor
+
+#     Return:
+#         downsampled LR image
+
+#     Reference:
+#         @inproceedings{zhang2019deep,
+#           title={Deep Plug-and-Play Super-Resolution for Arbitrary Blur Kernels},
+#           author={Zhang, Kai and Zuo, Wangmeng and Zhang, Lei},
+#           booktitle={IEEE Conference on Computer Vision and Pattern Recognition},
+#           pages={1671--1681},
+#           year={2019}
+#         }
+#     '''
+#     x = bicubic_degradation(x, sf=sf)
+#     x = ndimage.filters.convolve(x, np.expand_dims(k, axis=2), mode='wrap')
+#     return x
+
+
+# def classical_degradation(x, k, sf=3):
+#     ''' blur + downsampling
+
+#     Args:
+#         x: HxWxC image, [0, 1]/[0, 255]
+#         k: hxw, double
+#         sf: down-scale factor
+
+#     Return:
+#         downsampled LR image
+#     '''
+#     x = ndimage.filters.convolve(x, np.expand_dims(k, axis=2), mode='wrap')
+#     #x = filters.correlate(x, np.expand_dims(np.flip(k), axis=2))
+#     st = 0
+#     return x[st::sf, st::sf, ...]
+
+
+# def add_sharpening(img, weight=0.5, radius=50, threshold=10):
+#     """USM sharpening. borrowed from real-ESRGAN
+#     Input image: I; Blurry image: B.
+#     1. K = I + weight * (I - B)
+#     2. Mask = 1 if abs(I - B) > threshold, else: 0
+#     3. Blur mask:
+#     4. Out = Mask * K + (1 - Mask) * I
+#     Args:
+#         img (Numpy array): Input image, HWC, BGR; float32, [0, 1].
+#         weight (float): Sharp weight. Default: 1.
+#         radius (float): Kernel size of Gaussian blur. Default: 50.
+#         threshold (int):
+#     """
+#     if radius % 2 == 0:
+#         radius += 1
+#     blur = cv2.GaussianBlur(img, (radius, radius), 0)
+#     residual = img - blur
+#     mask = np.abs(residual) * 255 > threshold
+#     mask = mask.astype('float32')
+#     soft_mask = cv2.GaussianBlur(mask, (radius, radius), 0)
+
+#     K = img + weight * residual
+#     K = np.clip(K, 0, 1)
+#     return soft_mask * K + (1 - soft_mask) * img
+
+def uniform_Gaussian(size):
+    return np.full((size, size), 1 / size**2)
 
 def add_blur(img, sf=4):
-    wd2 = 4.0 + sf
-    wd = 2.0 + 0.2*sf
-    if random.random() < 0.5:
-        l1 = wd2*random.random()
-        l2 = wd2*random.random()
+    choice = random.choice([0, 1, 2])
+    if choice == 0:
+        wd = 30 * sf
+        l1 = wd*random.random()
+        l2 = wd*random.random()
         k = anisotropic_Gaussian(ksize=2*random.randint(2,11)+3, theta=random.random()*np.pi, l1=l1, l2=l2)
-    else:
+    elif choice == 1:
+        wd = 30 * sf
         k = fspecial('gaussian', 2*random.randint(2,11)+3, wd*random.random())
+    elif choice == 2:
+        w = np.random.randint(3, 30* sf + 1)
+        k = uniform_Gaussian(w)
     img = ndimage.filters.convolve(img, np.expand_dims(k, axis=2), mode='mirror')
-
     return img
 
 
@@ -418,110 +423,107 @@ def add_JPEG_noise(img):
     return img
 
 
-def random_crop(lq, hq, sf=4, lq_patchsize=64):
-    h, w = lq.shape[:2]
-    rnd_h = random.randint(0, h-lq_patchsize)
-    rnd_w = random.randint(0, w-lq_patchsize)
-    lq = lq[rnd_h:rnd_h + lq_patchsize, rnd_w:rnd_w + lq_patchsize, :]
+# def random_crop(lq, hq, sf=4, lq_patchsize=64):
+#     h, w = lq.shape[:2]
+#     rnd_h = random.randint(0, h-lq_patchsize)
+#     rnd_w = random.randint(0, w-lq_patchsize)
+#     lq = lq[rnd_h:rnd_h + lq_patchsize, rnd_w:rnd_w + lq_patchsize, :]
 
-    rnd_h_H, rnd_w_H = int(rnd_h * sf), int(rnd_w * sf)
-    hq = hq[rnd_h_H:rnd_h_H + lq_patchsize*sf, rnd_w_H:rnd_w_H + lq_patchsize*sf, :]
-    return lq, hq
-
-
-def degradation_bsrgan(img, sf=4, lq_patchsize=72, isp_model=None):
-    """
-    This is the degradation model of BSRGAN from the paper
-    "Designing a Practical Degradation Model for Deep Blind Image Super-Resolution"
-    ----------
-    img: HXWXC, [0, 1], its size should be large than (lq_patchsizexsf)x(lq_patchsizexsf)
-    sf: scale factor
-    isp_model: camera ISP model
-
-    Returns
-    -------
-    img: low-quality patch, size: lq_patchsizeXlq_patchsizeXC, range: [0, 1]
-    hq: corresponding high-quality patch, size: (lq_patchsizexsf)X(lq_patchsizexsf)XC, range: [0, 1]
-    """
-    isp_prob, jpeg_prob, scale2_prob = 0.25, 0.9, 0.25
-    sf_ori = sf
-
-    h1, w1 = img.shape[:2]
-    img = img.copy()[:h1 - h1 % sf, :w1 - w1 % sf, ...]  # mod crop
-    h, w = img.shape[:2]
-
-    if h < lq_patchsize*sf or w < lq_patchsize*sf:
-        raise ValueError(f'img size ({h1}X{w1}) is too small!')
-
-    hq = img.copy()
-
-    if sf == 4 and random.random() < scale2_prob:   # downsample1
-        if np.random.rand() < 0.5:
-            img = cv2.resize(img, (int(1/2*img.shape[1]), int(1/2*img.shape[0])), interpolation=random.choice([1,2,3]))
-        else:
-            img = util.imresize_np(img, 1/2, True)
-        img = np.clip(img, 0.0, 1.0)
-        sf = 2
-
-    shuffle_order = random.sample(range(7), 7)
-    idx1, idx2 = shuffle_order.index(2), shuffle_order.index(3)
-    if idx1 > idx2:  # keep downsample3 last
-        shuffle_order[idx1], shuffle_order[idx2] = shuffle_order[idx2], shuffle_order[idx1]
-
-    for i in shuffle_order:
-
-        if i == 0:
-            img = add_blur(img, sf=sf)
-
-        elif i == 1:
-            img = add_blur(img, sf=sf)
-
-        elif i == 2:
-            a, b = img.shape[1], img.shape[0]
-            # downsample2
-            if random.random() < 0.75:
-                sf1 = random.uniform(1,2*sf)
-                img = cv2.resize(img, (int(1/sf1*img.shape[1]), int(1/sf1*img.shape[0])), interpolation=random.choice([1,2,3]))
-            else:
-                k = fspecial('gaussian', 25, random.uniform(0.1, 0.6*sf))
-                k_shifted = shift_pixel(k, sf)
-                k_shifted = k_shifted/k_shifted.sum()  # blur with shifted kernel
-                img = ndimage.filters.convolve(img, np.expand_dims(k_shifted, axis=2), mode='mirror')
-                img = img[0::sf, 0::sf, ...]  # nearest downsampling
-            img = np.clip(img, 0.0, 1.0)
-
-        elif i == 3:
-            # downsample3
-            img = cv2.resize(img, (int(1/sf*a), int(1/sf*b)), interpolation=random.choice([1,2,3]))
-            img = np.clip(img, 0.0, 1.0)
-
-        elif i == 4:
-            # add Gaussian noise
-            img = add_Gaussian_noise(img, noise_level1=2, noise_level2=25)
-
-        elif i == 5:
-            # add JPEG noise
-            if random.random() < jpeg_prob:
-                img = add_JPEG_noise(img)
-
-        elif i == 6:
-            # add processed camera sensor noise
-            if random.random() < isp_prob and isp_model is not None:
-                with torch.no_grad():
-                    img, hq = isp_model.forward(img.copy(), hq)
-
-    # add final JPEG compression noise
-    img = add_JPEG_noise(img)
-
-    # random crop
-    img, hq = random_crop(img, hq, sf_ori, lq_patchsize)
-
-    return img, hq
+#     rnd_h_H, rnd_w_H = int(rnd_h * sf), int(rnd_w * sf)
+#     hq = hq[rnd_h_H:rnd_h_H + lq_patchsize*sf, rnd_w_H:rnd_w_H + lq_patchsize*sf, :]
+#     return lq, hq
 
 
+# def degradation_bsrgan(img, sf=4, lq_patchsize=72, isp_model=None):
+#     """
+#     This is the degradation model of BSRGAN from the paper
+#     "Designing a Practical Degradation Model for Deep Blind Image Super-Resolution"
+#     ----------
+#     img: HXWXC, [0, 1], its size should be large than (lq_patchsizexsf)x(lq_patchsizexsf)
+#     sf: scale factor
+#     isp_model: camera ISP model
 
+#     Returns
+#     -------
+#     img: low-quality patch, size: lq_patchsizeXlq_patchsizeXC, range: [0, 1]
+#     hq: corresponding high-quality patch, size: (lq_patchsizexsf)X(lq_patchsizexsf)XC, range: [0, 1]
+#     """
+#     isp_prob, jpeg_prob, scale2_prob = 0.25, 0.9, 0.25
+#     sf_ori = sf
 
-def degradation_bsrgan_plus(img, sf=4, shuffle_prob=0.5, use_sharp=True, lq_patchsize=64, isp_model=None):
+#     h1, w1 = img.shape[:2]
+#     img = img.copy()[:h1 - h1 % sf, :w1 - w1 % sf, ...]  # mod crop
+#     h, w = img.shape[:2]
+
+#     if h < lq_patchsize*sf or w < lq_patchsize*sf:
+#         raise ValueError(f'img size ({h1}X{w1}) is too small!')
+
+#     hq = img.copy()
+
+#     if sf == 4 and random.random() < scale2_prob:   # downsample1
+#         if np.random.rand() < 0.5:
+#             img = cv2.resize(img, (int(1/2*img.shape[1]), int(1/2*img.shape[0])), interpolation=random.choice([1,2,3]))
+#         else:
+#             img = util.imresize_np(img, 1/2, True)
+#         img = np.clip(img, 0.0, 1.0)
+#         sf = 2
+
+#     shuffle_order = random.sample(range(7), 7)
+#     idx1, idx2 = shuffle_order.index(2), shuffle_order.index(3)
+#     if idx1 > idx2:  # keep downsample3 last
+#         shuffle_order[idx1], shuffle_order[idx2] = shuffle_order[idx2], shuffle_order[idx1]
+
+#     for i in shuffle_order:
+
+#         if i == 0:
+#             img = add_blur(img, sf=sf)
+
+#         elif i == 1:
+#             img = add_blur(img, sf=sf)
+
+#         elif i == 2:
+#             a, b = img.shape[1], img.shape[0]
+#             # downsample2
+#             if random.random() < 0.75:
+#                 sf1 = random.uniform(1,2*sf)
+#                 img = cv2.resize(img, (int(1/sf1*img.shape[1]), int(1/sf1*img.shape[0])), interpolation=random.choice([1,2,3]))
+#             else:
+#                 k = fspecial('gaussian', 25, random.uniform(0.1, 0.6*sf))
+#                 k_shifted = shift_pixel(k, sf)
+#                 k_shifted = k_shifted/k_shifted.sum()  # blur with shifted kernel
+#                 img = ndimage.filters.convolve(img, np.expand_dims(k_shifted, axis=2), mode='mirror')
+#                 img = img[0::sf, 0::sf, ...]  # nearest downsampling
+#             img = np.clip(img, 0.0, 1.0)
+
+#         elif i == 3:
+#             # downsample3
+#             img = cv2.resize(img, (int(1/sf*a), int(1/sf*b)), interpolation=random.choice([1,2,3]))
+#             img = np.clip(img, 0.0, 1.0)
+
+#         elif i == 4:
+#             # add Gaussian noise
+#             img = add_Gaussian_noise(img, noise_level1=2, noise_level2=25)
+
+#         elif i == 5:
+#             # add JPEG noise
+#             if random.random() < jpeg_prob:
+#                 img = add_JPEG_noise(img)
+
+#         elif i == 6:
+#             # add processed camera sensor noise
+#             if random.random() < isp_prob and isp_model is not None:
+#                 with torch.no_grad():
+#                     img, hq = isp_model.forward(img.copy(), hq)
+
+#     # add final JPEG compression noise
+#     img = add_JPEG_noise(img)
+
+#     # random crop
+#     img, hq = random_crop(img, hq, sf_ori, lq_patchsize)
+
+#     return img, hq
+
+def degradation(img, sf=4, lq_patchsize=64):
     """
     This is an extended degradation model by combining
     the degradation models of BSRGAN and Real-ESRGAN
@@ -544,55 +546,31 @@ def degradation_bsrgan_plus(img, sf=4, shuffle_prob=0.5, use_sharp=True, lq_patc
     if h < lq_patchsize*sf or w < lq_patchsize*sf:
         raise ValueError(f'img size ({h1}X{w1}) is too small!')
 
-    if use_sharp:
-        img = add_sharpening(img)
     hq = img.copy()
 
-    if random.random() < shuffle_prob:
-        shuffle_order = random.sample(range(13), 13)
-    else:
-        shuffle_order = list(range(13))
-        # local shuffle for noise, JPEG is always the last one
-        shuffle_order[2:6] = random.sample(shuffle_order[2:6], len(range(2, 6)))
-        shuffle_order[9:13] = random.sample(shuffle_order[9:13], len(range(9, 13)))
+    shuffle_order = random.sample(range(6), 6)
 
-    poisson_prob, speckle_prob, isp_prob = 0.1, 0.1, 0.1
-
+    p = 0.5
     for i in shuffle_order:
-        if i == 0:
+        if i == 0 and random.random() < 0.5:
             img = add_blur(img, sf=sf)
-        elif i == 1:
+        elif i == 1 and random.random() < 0.5:
             img = add_resize(img, sf=sf)
-        elif i == 2:
+        elif i == 2 and random.random() < 0.5:
             img = add_Gaussian_noise(img, noise_level1=2, noise_level2=25)
-        elif i == 3:
-            if random.random() < poisson_prob:
+        elif i == 3 and random.random() < 0.5:
+            if random.random() < 0.5:
                 img = add_Poisson_noise(img)
-        elif i == 4:
-            if random.random() < speckle_prob:
+            else:
                 img = add_speckle_noise(img)
-        elif i == 5:
-            if random.random() < isp_prob and isp_model is not None:
-                with torch.no_grad():
-                    img, hq = isp_model.forward(img.copy(), hq)
-        elif i == 6:
+        elif i == 4 and random.random() < 0.5:
             img = add_JPEG_noise(img)
-        elif i == 7:
-            img = add_blur(img, sf=sf)
-        elif i == 8:
-            img = add_resize(img, sf=sf)
-        elif i == 9:
-            img = add_Gaussian_noise(img, noise_level1=2, noise_level2=25)
-        elif i == 10:
-            if random.random() < poisson_prob:
-                img = add_Poisson_noise(img)
-        elif i == 11:
-            if random.random() < speckle_prob:
-                img = add_speckle_noise(img)
-        elif i == 12:
-            if random.random() < isp_prob and isp_model is not None:
-                with torch.no_grad():
-                    img, hq = isp_model.forward(img.copy(), hq)
+        #TODO Enhance!
+        elif i == 5 and random.random() < 0.5:
+            print("hello")
+        #TODO Distractors
+        elif i == 6 and random.random() < 0.5:
+            print("lol")
         else:
             print('check the shuffle!')
 
@@ -600,10 +578,10 @@ def degradation_bsrgan_plus(img, sf=4, shuffle_prob=0.5, use_sharp=True, lq_patc
     img = cv2.resize(img, (int(1/sf*hq.shape[1]), int(1/sf*hq.shape[0])), interpolation=random.choice([1, 2, 3]))
 
     # add final JPEG compression noise
-    img = add_JPEG_noise(img)
+    #img = add_JPEG_noise(img)
 
     # random crop
-    img, hq = random_crop(img, hq, sf, lq_patchsize)
+    #img, hq = random_crop(img, hq, sf, lq_patchsize)
 
     return img, hq
 
@@ -615,7 +593,7 @@ if __name__ == '__main__':
     sf = 4
     
     for i in range(20):
-        img_lq, img_hq = degradation_bsrgan(img, sf=sf, lq_patchsize=72)
+        #img_lq, img_hq = degradation_bsrgan(img, sf=sf, lq_patchsize=72)
         print(i)
         lq_nearest =  cv2.resize(util.single2uint(img_lq), (int(sf*img_lq.shape[1]), int(sf*img_lq.shape[0])), interpolation=0)
         img_concat = np.concatenate([lq_nearest, util.single2uint(img_hq)], axis=1)
