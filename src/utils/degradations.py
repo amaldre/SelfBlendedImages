@@ -445,11 +445,11 @@ def enhance(img):
 
     return img_enhanced_np
 
-def choose_image(image_list):
+def choose_image(image_list, path_lm):
     filename=random.choice(image_list)
     img=np.array(Image.open(filename))
 	#Get dlib landmarks
-    landmark=np.load(filename.replace('.png','.npy').replace('/frames/',self.path_lm))[0]
+    landmark=np.load(filename.replace('.png','.npy').replace('/frames/', path_lm))[0]
 	#Get dlib bounding landmarks
     bbox_lm=np.array([landmark[:,0].min(),landmark[:,1].min(),landmark[:,0].max(),landmark[:,1].max()])
 	#Get to two first bounding boxes detected by retina
@@ -606,7 +606,7 @@ def add_image(img, img_to_add):
 
 #     return img, hq
 
-def degradation(img, image_list, sf=4, lq_patchsize=64):
+def degradation(img, image_list, path_lm, sf=4, lq_patchsize=64):
     """
     This is an extended degradation model by combining
     the degradation models of BSRGAN and Real-ESRGAN
@@ -658,7 +658,7 @@ def degradation(img, image_list, sf=4, lq_patchsize=64):
             img = enhance(img)
         #TODO Distractors
         elif i == 7:
-            img = add_distractors(img, image_list, p_d)
+            img = add_distractors(img, image_list, path_lm, p_d)
         else:
             print('check the shuffle!')
 
