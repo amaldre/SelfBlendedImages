@@ -455,16 +455,16 @@ def add_distractors(img, p_d):
 
 def add_text(img):
     n_chars = random.randint(0, 10)
-    text = random.sample(string.printable, n_chars)
+    text = ''.join(random.sample(string.printable, n_chars))
     height, width = img.shape[: 2]
-    x = random.uniform(-100, width)
-    y = random.uniform(0, height + 100)
+    x = random.randint(-100, width)
+    y = random.randint(0, height + 100)
     font = random.randint(0, 7)
     font_scale = 8 * random.random()
-    color = (random.uniform(0, 255), random.uniform(0, 255), random.uniform(0, 255))
+    color = (random.randints(0, 255), random.randint(0, 255), random.randint(0, 255))
     thickness = random.randint(1, 8)
     line_type = random.randint(0, 2)
-    cv2.putText(img, text, )
+    cv2.putText(img, text, (x, y), font, font_scale, color, thickness, line_type)
 
 def add_image(img):
     return img
