@@ -443,13 +443,34 @@ def enhance(img):
 
     return img_enhanced_np
 
-def add_distractors(img, p_d):
+def choose_image(image_list):
+    filename=random.choice(image_list)
+    img=np.array(Image.open(filename))
+	#Get dlib landmarks
+    landmark=np.load(filename.replace('.png','.npy').replace('/frames/',self.path_lm))[0]
+	#Get dlib bounding landmarks
+    bbox_lm=np.array([landmark[:,0].min(),landmark[:,1].min(),landmark[:,0].max(),landmark[:,1].max()])
+	#Get to two first bounding boxes detected by retina
+    bboxes=np.load(filename.replace('.png','.npy').replace('/frames/','/retina/'))[:2]
+				#Finding face with highest iou
+    iou_max=-1
+    for i in range(len(bboxes)):
+        iou=IoUfrom2bboxes(bbox_lm,bboxes[i].flatten())
+        if iou_max<iou:
+            bbox=bboxes[i]
+            iou_max=iou
+	#Reorder landmark
+    landmark=reorder_landmark(landmark)
+
+    img_f,_,__,___,y0_new,y1_new,x0_new,x1_new=crop_face(img_f,landmark,bbox,margin=False,crop_by_bbox=True,abs_coord=True,phase=self.phase)
+
+def add_distractors(img, image_list, p_d):
     n = 0
     while random.choice() < p_d and n < 10:
         if random.choice() < 0.5:
             img = add_text(img)
         else:
-            img_to_add = choose_image()
+            img_to_add = choose_image(image_list)
             img = add_image(img)
         n += 1
     return img
@@ -582,7 +603,7 @@ def add_image(img, img_to_add):
 
 #     return img, hq
 
-def degradation(img, sf=4, lq_patchsize=64):
+def degradation(img, image_list, sf=4, lq_patchsize=64):
     """
     This is an extended degradation model by combining
     the degradation models of BSRGAN and Real-ESRGAN
@@ -634,7 +655,7 @@ def degradation(img, sf=4, lq_patchsize=64):
             img = enhance(img)
         #TODO Distractors
         elif i == 7:
-            img = add_distractors(img, p_d)
+            img = add_distractors(img, image_list, p_d)
         else:
             print('check the shuffle!')
 
