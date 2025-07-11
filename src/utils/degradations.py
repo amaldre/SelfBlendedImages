@@ -13,6 +13,8 @@ from scipy.interpolate import interp2d
 from scipy.linalg import orth
 from PIL import Image, ImageEnhance
 import string
+from funcs import IoUfrom2bboxes, crop_face
+from sbi import SBI_Dataset
 
 
 """
@@ -460,9 +462,10 @@ def choose_image(image_list):
             bbox=bboxes[i]
             iou_max=iou
 	#Reorder landmark
-    landmark=reorder_landmark(landmark)
+    landmark=SBI_Dataset.reorder_landmark(landmark)
 
-    img_f,_,__,___,y0_new,y1_new,x0_new,x1_new=crop_face(img_f,landmark,bbox,margin=False,crop_by_bbox=True,abs_coord=True,phase=self.phase)
+    img,_,__,___,y0_new,y1_new,x0_new,x1_new=crop_face(img,landmark,bbox,margin=False,crop_by_bbox=True,abs_coord=True,phase='train')
+    return img
 
 def add_distractors(img, image_list, p_d):
     n = 0

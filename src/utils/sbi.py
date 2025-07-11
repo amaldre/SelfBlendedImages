@@ -41,7 +41,6 @@ else:
 
 print(f"exist_bi: {exist_bi}")
 
-
 class SBI_Dataset(Dataset):
 	def __init__(self,phase='train',image_size=224,n_frames=8):
 		
@@ -215,6 +214,7 @@ class SBI_Dataset(Dataset):
 
 		return img,img_blended,mask
 	
+	@staticmethod
 	def reorder_landmark(self,landmark):
 		landmark_add=np.zeros((13,2))
 		for idx,idx_l in enumerate([77,75,76,68,69,70,71,80,72,73,79,74,78]):
