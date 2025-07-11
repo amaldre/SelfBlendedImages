@@ -334,29 +334,29 @@ def fspecial(filter_type, *args, **kwargs):
 def uniform_Gaussian(size):
     return np.full((size, size), 1 / size**2)
 
-def add_blur(img, sf=4):
+def add_blur(img, s):
     choice = random.choice([0, 1, 2])
     if choice == 0:
-        wd = 30 * sf
+        wd = 30 * s
         l1 = wd*random.random()
         l2 = wd*random.random()
         k = anisotropic_Gaussian(ksize=2*random.randint(2,11)+3, theta=random.random()*np.pi, l1=l1, l2=l2)
     elif choice == 1:
-        wd = 30 * sf
+        wd = 30 * s
         k = fspecial('gaussian', 2*random.randint(2,11)+3, wd*random.random())
     elif choice == 2:
-        w = np.random.randint(3, 30* sf + 1)
+        w = np.random.randint(3, 30* s + 1)
         k = uniform_Gaussian(w)
     img = ndimage.filters.convolve(img, np.expand_dims(k, axis=2), mode='mirror')
     return img
 
 
-def add_resize(img, sf=4):
+def add_resize(img, s):
     rnum = np.random.rand()
     if rnum > 0.8:  # up
         sf1 = random.uniform(1, 2)
     elif rnum < 0.7:  # down
-        sf1 = random.uniform(0.25/sf, 1)
+        sf1 = random.uniform(0.25/s, 1)
     else:
         sf1 = 1.0
     img = cv2.resize(img, (int(sf1*img.shape[1]), int(sf1*img.shape[0])), interpolation=random.choice([1, 2, 3]))
@@ -573,17 +573,19 @@ def degradation(img, sf=4, lq_patchsize=64):
     shuffle_order = random.sample(range(7), 7)
 
     p = 0.5
+    p_d = 0.2
+    s = 0.5
     for i in shuffle_order:
         if i == 0 and random.random() < p:
-            img = add_blur(img, sf=sf)
+            img = add_blur(img, s)
         elif i == 1 and random.random() < p:
-            img = add_resize(img, sf=sf)
+            img = add_resize(img, s)
         elif i == 2 and random.random() < p/2:
             l1 = 2, l2 = 100
-            img = add_Gaussian_noise(img, noise_level1=l1 * sf, noise_level2=l2 * sf)
+            img = add_Gaussian_noise(img, noise_level1=l1 * s, noise_level2=l2 * s)
         elif i == 3 and random.random() < p/2:
             l1 = 80, l2 = 100
-            img = add_Gaussian_noise(img, noise_level1=l1 * sf, noise_level2=l2 * sf)
+            img = add_Gaussian_noise(img, noise_level1=l1 * s, noise_level2=l2 * s)
         elif i == 4 and random.random() < p:
             if random.random() < 0.5:
                 img = add_Poisson_noise(img)
@@ -591,7 +593,6 @@ def degradation(img, sf=4, lq_patchsize=64):
                 img = add_speckle_noise(img)
         elif i == 5 and random.random() < p:
             img = add_JPEG_noise(img)
-        #TODO Enhance!
         elif i == 6 and random.random() < p:
             img = enhance(img)
         #TODO Distractors
