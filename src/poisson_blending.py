@@ -6,9 +6,8 @@ CS 6745 Final Project Fall 2017
 """
 
 import numpy as np
+from scipy.sparse import linalg as linalg
 from scipy.sparse import lil_matrix as lil_matrix
-from scipy.sparse import linalg as splinalg
-from scipy.sparse import csr_matrix
 
 # Helper enum
 OMEGA = 0
@@ -58,55 +57,52 @@ def get_surrounding(index):
     return [(i+1,j),(i-1,j),(i,j+1),(i,j-1)]
 
 # Create the A sparse matrix
-def poisson_sparse_matrix(points, point_to_idx):
+def poisson_sparse_matrix(points):
+    # N = number of points in mask
     N = len(points)
-    row, col, data = [], [], []
-
-    for idx, point in enumerate(points):
-        row.append(idx)
-        col.append(idx)
-        data.append(4)
-
-        for nb in get_surrounding(point):
-            if nb in point_to_idx:
-                j = point_to_idx[nb]
-                row.append(idx)
-                col.append(j)
-                data.append(-1)
-
-    A = csr_matrix((data, (row, col)), shape=(N, N))
+    A = lil_matrix((N,N))
+    # Set up row for each point in mask
+    for i,index in enumerate(points):
+        # Should have 4's diagonal
+        A[i,i] = 4
+        # Get all surrounding points
+        for x in get_surrounding(index):
+            # If a surrounding point is in the mask, add -1 to index's
+            # row at correct position
+            if x not in points: continue
+            j = points.index(x)
+            A[i,j] = -1
     return A
 
-
+# Main method
+# Does Poisson image editing on one channel given a source, target, and mask
 def process(source, target, mask):
     indicies = list(mask_indicies(mask))
     N = len(indicies)
-
-    point_to_idx = {pt: idx for idx, pt in enumerate(indicies)}
-    A = poisson_sparse_matrix(indicies, point_to_idx)
-
-    from scipy.ndimage import laplace
-    source_lap = laplace(source, mode='nearest')
-
+    # Create poisson A matrix. Contains mostly 0's, some 4's and -1's
+    A = poisson_sparse_matrix(indicies)
+    # Create B matrix
     b = np.zeros(N)
-    for i, index in enumerate(indicies):
-        b[i] = source_lap[index]
+    for i,index in enumerate(indicies):
+        # Start with left hand side of discrete equation
+        b[i] = lapl_at_index(source, index)
+        # If on boundry, add in target intensity
+        # Creates constraint lapl source = target at boundary
         if point_location(index, mask) == DEL_OMEGA:
-            # Faster: sum boundary contributions with list comprehension
-            b[i] += sum(target[pt] for pt in get_surrounding(index) if not in_omega(pt, mask))
+            for pt in get_surrounding(index):
+                if in_omega(pt,mask) == False:
+                    b[i] += target[pt]
 
-    # Solve using conjugate gradient
-    x, info = splinalg.cg(A, b, tol=1e-5, maxiter=1500)
-    if info != 0:
-        print(f"CG did not converge, falling back to spsolve (info: {info})")
-        x = splinalg.spsolve(A, b)
-
-    composite = np.copy(target).astype(np.float32)
-    indices_i, indices_j = zip(*indicies)
-    composite[indices_i, indices_j] = np.clip(x, 0, 255)
-
+    # Solve for x, unknown intensities
+    x = linalg.cg(A, b)
+    # Copy target photo, make sure as int
+    composite = np.copy(target).astype(int)
+    # Place new intensity on target at given index
+    for i,index in enumerate(indicies):
+        val = x[0][i]
+        val = np.clip(val, 0, 255)
+        composite[index] = x[0][i]
     return composite
-
 
 # Naive blend, puts the source region directly on the target.
 # Useful for testing
