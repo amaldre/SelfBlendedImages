@@ -41,6 +41,8 @@ def init_dataset(dataset):
 		video_list, target_list, video_root = init_alexandre_pristine()
 	elif dataset.upper() == 'TEAM':
 		video_list, target_list, video_root = init_team() 
+	elif dataset.upper() == 'FAKE_TEAM':
+		video_list, target_list, video_root = init_fake_team()
 	else:
 		print(dataset)
 		NotImplementedError
@@ -205,5 +207,9 @@ def init_alexandre_pristine():
 def init_team():
 	video_root = 'ShareIDTeam'
 	return init_custom_folder(video_root, 0)
+
+def init_fake_team():
+	video_root = 'ShareIDFake/output'
+	return init_custom_folder(video_root, 1)
 #91
 #alexandre| AUC: N/A (only one label), Accuracy: 0.0909, Avg Precision:  N/A (only one label), Avg Recall:  N/A (only one label)
