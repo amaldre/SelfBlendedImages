@@ -65,7 +65,6 @@ class SBI_Dataset(Dataset):
 		self.transforms=self.get_transforms()
 		self.source_transforms = self.get_source_transforms()
 		self.degradations = degradations
-		self.final_transforms = get_final_transforms()
 
 
 	def __len__(self):
