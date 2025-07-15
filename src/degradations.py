@@ -14,6 +14,8 @@ import string
 from utils.funcs import IoUfrom2bboxes, crop_face
 from utils.sbi import SBI_Dataset
 from tqdm import tqdm
+from torchvision.utils import save_image
+import os
 
 """
 # --------------------------------------------
@@ -277,7 +279,10 @@ def add_text(img):
     color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     thickness = random.randint(1, 8)
     line_type = random.randint(0, 2)
+    img = cv2.cvtColor(np.uint8((img.clip(0, 1)*255.).round()), cv2.COLOR_RGB2BGR)
     cv2.putText(img, text, (x, y), font, font_scale, color, thickness, line_type)
+    img = cv2.cvtColor(np.float32(img/255.), cv2.COLOR_BGR2RGB)
+    return img 
 
 def add_image(img, img_to_add):
     x = random.randint(20, 100)
@@ -390,6 +395,10 @@ if __name__ == '__main__':
     # img_jpeg = add_JPEG_noise(img)
     # img_enhance = enhance(img)
 
+# Crée un dossier pour les images (ne plante pas si déjà là)
+    save_dir = "debug_degraded"
+    os.makedirs(save_dir, exist_ok=True)
+
     device = torch.device('cuda')
     val_dataset = SBI_Dataset(phase = 'val', image_size = 380)
     val_loader=torch.utils.data.DataLoader(val_dataset,
@@ -413,8 +422,10 @@ if __name__ == '__main__':
             # Reconvertir en tensor (C, H, W)
             degraded_img_np = np.transpose(degraded_img_np, (2, 0, 1))  # (C, H, W)
             degraded_img_tensor = torch.from_numpy(degraded_img_np).to(device).float()
-    
+
             degraded_list.append(degraded_img_tensor)
+            save_path = os.path.join(save_dir, f"step{step}_img{i}.png")
+            save_image(degraded_img_tensor.clamp(0, 1), save_path)
 
         # Empiler pour obtenir un batch final
         degraded_img_batch = torch.stack(degraded_list, dim=0) 
