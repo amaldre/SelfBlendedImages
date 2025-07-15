@@ -128,15 +128,6 @@ class SBI_Dataset(Dataset):
 				img_f=img_f.transpose((2,0,1))
 				img_r=img_r.transpose((2,0,1))
 
-				#Apply final transforms
-				img_f = torch.from_numpy(img_f) 
-				img_r = torch.from_numpy(img_r)
-
-				img_f = self.final_transforms(img_f)
-				img_r = self.final_transforms(img_r)
-				
-				img_f = img_f.numpy()
-				img_r = img_r.numpy()
 				flag=False
 			except Exception as e:
 				print(e)

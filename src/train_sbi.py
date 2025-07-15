@@ -7,7 +7,7 @@ import os
 from PIL import Image
 import sys
 import random
-from utils.sbi import SBI_Dataset
+from utils.sbi import SBI_Dataset, get_final_transforms
 from utils.scheduler import LinearDecayLR
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
 import argparse
@@ -141,6 +141,7 @@ def main(args):
             resume=False
         )
 
+    final_transforms = get_final_transforms()
     for epoch in range(n_epoch):
         np.random.seed(seed + epoch)
         train_loss = 0.
@@ -153,6 +154,8 @@ def main(args):
             img = data['img'].to(device, non_blocking=True).float()
             if DEGRADATIONS:
                 img = get_degraded_batch(img, train_dataset.image_list, train_dataset.path_lm, device)
+            for i in range(img.size(0)):
+                img[i] = final_transforms(img[i])
             target = data['label'].to(device, non_blocking=True).long()
 
             output = model.training_step(img, target)
@@ -194,6 +197,8 @@ def main(args):
             img = data['img'].to(device, non_blocking=True).float()
             if DEGRADATIONS:
                 img = get_degraded_batch(img, val_dataset.image_list, val_dataset.path_lm, device)
+            for i in range(img.size(0)):
+                img[i] = final_transforms(img[i])
             target = data['label'].to(device, non_blocking=True).long()
 
             with torch.no_grad():
