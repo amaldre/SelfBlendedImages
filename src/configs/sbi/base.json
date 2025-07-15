@@ -1,11 +1,11 @@
 
 {
     "epoch":100,
-    "batch_size":16,
+    "batch_size": 4,
     "image_size":380,
-    "use_wandb": 1,
+    "use_wandb": 0,
     "lr": 0.001,
     "test_datasets": ["FF","CDF"],
     "test_every": 5,
-    "PMM": 1
+    "degradations": 1
 }

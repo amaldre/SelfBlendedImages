@@ -62,7 +62,7 @@ def compute_accuray(pred,true):
 def main(args):
     cfg=load_json(args.config)
     USE_WANDB = cfg['use_wandb'] == 1
-    PMM = cfg['PMM'] == 1
+    DEGRADATIONS = cfg['degradations'] == 1
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -76,8 +76,8 @@ def main(args):
 
     image_size=cfg['image_size']
     batch_size=cfg['batch_size']
-    train_dataset=SBI_Dataset(phase='train',image_size=image_size, PMM = PMM)
-    val_dataset=SBI_Dataset(phase='val',image_size=image_size, PMM = PMM)
+    train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS)
+    val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS)
    
     train_loader=torch.utils.data.DataLoader(train_dataset,
                         batch_size=batch_size//2,
@@ -151,7 +151,7 @@ def main(args):
 
         for step, data in enumerate(tqdm(train_loader)):
             img = data['img'].to(device, non_blocking=True).float()
-            if PMM:
+            if DEGRADATIONS:
                 img = get_degraded_batch(img, train_dataset.image_list, train_dataset.path_lm, device)
             target = data['label'].to(device, non_blocking=True).long()
 
@@ -192,7 +192,7 @@ def main(args):
         np.random.seed(seed)
         for step, data in enumerate(tqdm(val_loader)):
             img = data['img'].to(device, non_blocking=True).float()
-            if PMM:
+            if DEGRADATIONS:
                 img = get_degraded_batch(img, val_dataset.image_list, val_dataset.path_lm, device)
             target = data['label'].to(device, non_blocking=True).long()
 
