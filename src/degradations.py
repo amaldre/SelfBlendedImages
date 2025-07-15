@@ -3,8 +3,6 @@ import numpy as np
 import cv2
 import torch
 
-from utils import utils_image as util
-
 import random
 from scipy import ndimage
 import scipy
@@ -13,9 +11,9 @@ from scipy.interpolate import interp2d
 from scipy.linalg import orth
 from PIL import Image, ImageEnhance
 import string
-from funcs import IoUfrom2bboxes, crop_face
-from sbi import SBI_Dataset
-
+from utils.funcs import IoUfrom2bboxes, crop_face
+from utils.sbi import SBI_Dataset
+from tqdm import tqdm
 
 """
 # --------------------------------------------
@@ -144,19 +142,33 @@ def add_resize(img, s):
 
 
 def add_Gaussian_noise(img, noise_level1=2, noise_level2=25):
+    # Convert image to float32 in [0, 1] range if not already
+    img = img.astype(np.float32)
+
     noise_level = random.randint(noise_level1, noise_level2)
     rnum = np.random.rand()
-    if rnum > 0.6:   # add color Gaussian noise
-        img += np.random.normal(0, noise_level/255.0, img.shape).astype(np.float32)
-    elif rnum < 0.4: # add grayscale Gaussian noise
-        img += np.random.normal(0, noise_level/255.0, (*img.shape[:2], 1)).astype(np.float32)
-    else:            # add  noise
-        L = noise_level2/255.
+
+    if rnum > 0.6:  # add color Gaussian noise
+        noise = np.random.normal(0, noise_level / 255.0, img.shape).astype(np.float32)
+
+    elif rnum < 0.4:  # add grayscale Gaussian noise
+        noise_gray = np.random.normal(0, noise_level / 255.0, img.shape[:2])
+        noise = np.repeat(noise_gray[:, :, np.newaxis], 3, axis=2).astype(np.float32)
+
+    else:  # add multivariate Gaussian noise
+        L = noise_level2 / 255.0
         D = np.diag(np.random.rand(3))
-        U = orth(np.random.rand(3,3))
-        conv = np.dot(np.dot(np.transpose(U), D), U)
-        img += np.random.multivariate_normal([0,0,0], np.abs(L**2*conv), img.shape[:2]).astype(np.float32)
+        U = orth(np.random.rand(3, 3))
+        cov = np.dot(np.dot(U.T, D), U)
+        noise = np.random.multivariate_normal([0, 0, 0], np.abs(L**2 * cov), img.shape[:2])
+        noise = noise.reshape(img.shape).astype(np.float32)
+
+    # Add noise
+    img = img + noise
+
+    # Clip to valid range [0, 1]
     img = np.clip(img, 0.0, 1.0)
+
     return img
 
 #TODO figure out what to do with this
@@ -194,10 +206,10 @@ def add_Poisson_noise(img):
 
 def add_JPEG_noise(img):
     quality_factor = random.randint(10, 95)
-    img = cv2.cvtColor(util.single2uint(img), cv2.COLOR_RGB2BGR)
+    img = cv2.cvtColor(np.uint8((img.clip(0, 1)*255.).round()), cv2.COLOR_RGB2BGR)
     result, encimg = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), quality_factor])
     img = cv2.imdecode(encimg, 1)
-    img = cv2.cvtColor(util.uint2single(img), cv2.COLOR_BGR2RGB)
+    img = cv2.cvtColor(np.float32(img/255.), cv2.COLOR_BGR2RGB)
     return img
 
 def enhance(img):
@@ -243,13 +255,13 @@ def choose_image(image_list, path_lm):
     img,_,__,___,y0_new,y1_new,x0_new,x1_new=crop_face(img,landmark,bbox,margin=False,crop_by_bbox=True,abs_coord=True,phase='train')
     return img
 
-def add_distractors(img, image_list, p_d):
+def add_distractors(img, image_list, path_lm, p_d):
     n = 0
-    while random.choice() < p_d and n < 10:
-        if random.choice() < 0.5:
+    while random.random() < p_d and n < 10:
+        if random.random() < 0.5:
             img = add_text(img)
         else:
-            img_to_add = choose_image(image_list)
+            img_to_add = choose_image(image_list, path_lm)
             img = add_image(img, img_to_add)
         n += 1
     return img
@@ -262,7 +274,7 @@ def add_text(img):
     y = random.randint(0, height + 100)
     font = random.randint(0, 7)
     font_scale = 8 * random.random()
-    color = (random.randints(0, 255), random.randint(0, 255), random.randint(0, 255))
+    color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
     thickness = random.randint(1, 8)
     line_type = random.randint(0, 2)
     cv2.putText(img, text, (x, y), font, font_scale, color, thickness, line_type)
@@ -271,7 +283,7 @@ def add_image(img, img_to_add):
     x = random.randint(20, 100)
     y = int(random.uniform(0.8 * x, 1.2 * x))
     
-    img_to_add_resized = cv2.resize(img_to_add (x, y))
+    img_to_add_resized = cv2.resize(img_to_add, (x, y))/255
 
     height, width = img.shape[: 2]
 
@@ -292,7 +304,7 @@ def add_image(img, img_to_add):
 #     hq = hq[rnd_h_H:rnd_h_H + lq_patchsize*sf, rnd_w_H:rnd_w_H + lq_patchsize*sf, :]
 #     return lq, hq
 
-def degradation(img, image_list, path_lm, sf=4, lq_patchsize=64):
+def degradation(img, image_list, path_lm):
     """
     This is an extended degradation model by combining
     the degradation models of BSRGAN and Real-ESRGAN
@@ -308,30 +320,33 @@ def degradation(img, image_list, path_lm, sf=4, lq_patchsize=64):
     hq: corresponding high-quality patch, size: (lq_patchsizexsf)X(lq_patchsizexsf)XC, range: [0, 1]
     """
 
-    h1, w1 = img.shape[:2]
-    img = img.copy()[:h1 - h1 % sf, :w1 - w1 % sf, ...]  # mod crop
-    h, w = img.shape[:2]
+    # h1, w1 = img.shape[:2]
+    # img = img.copy()[:h1 - h1 % sf, :w1 - w1 % sf, ...]  # mod crop
+    # h, w = img.shape[:2]
 
-    if h < lq_patchsize*sf or w < lq_patchsize*sf:
-        raise ValueError(f'img size ({h1}X{w1}) is too small!')
+    # if h < lq_patchsize*sf or w < lq_patchsize*sf:
+    #     raise ValueError(f'img size ({h1}X{w1}) is too small!')
 
     hq = img.copy()
 
-    shuffle_order = random.sample(range(7), 7)
+    shuffle_order = random.sample(range(8), 8)
 
     p = 0.5
     p_d = 0.2
     s = 0.5
+
     for i in shuffle_order:
         if i == 0 and random.random() < p:
             img = add_blur(img, s)
         elif i == 1 and random.random() < p:
             img = add_resize(img, s)
         elif i == 2 and random.random() < p/2:
-            l1 = 2, l2 = 100
+            l1 = 2
+            l2 = 100
             img = add_Gaussian_noise(img, noise_level1=l1 * s, noise_level2=l2 * s)
         elif i == 3 and random.random() < p/2:
-            l1 = 80, l2 = 100
+            l1 = 80
+            l2 = 100
             img = add_Gaussian_noise(img, noise_level1=l1 * s, noise_level2=l2 * s)
         elif i == 4 and random.random() < p:
             if random.random() < 0.5:
@@ -344,11 +359,11 @@ def degradation(img, image_list, path_lm, sf=4, lq_patchsize=64):
             img = enhance(img)
         elif i == 7:
             img = add_distractors(img, image_list, path_lm, p_d)
-        else:
+        elif i > 7:
             print('check the shuffle!')
 
     # resize to desired size
-    img = cv2.resize(img, (int(1/sf*hq.shape[1]), int(1/sf*hq.shape[0])), interpolation=random.choice([1, 2, 3]))
+    img = cv2.resize(img, (int(hq.shape[1]), int(hq.shape[0])), interpolation=random.choice([1, 2, 3]))
 
     # add final JPEG compression noise
     #img = add_JPEG_noise(img)
@@ -356,27 +371,69 @@ def degradation(img, image_list, path_lm, sf=4, lq_patchsize=64):
     # random crop
     #img, hq = random_crop(img, hq, sf, lq_patchsize)
 
-    return img, hq
+    return img
 
 
 
 if __name__ == '__main__':
-    img = util.imread_uint('utils/test.png', 3)
-    img = util.uint2single(img)
-    sf = 4
+    # img = cv2.imread('/home/alicia/dataShareID/Celeb-Df-v2_crop/test/frames/Celeb-real/id0_0001/136.png')/255
+    # img_blur = add_blur(img, 0.5)
+    # img_resize = add_resize(img, 0.5)
+    # l1 = 2
+    # l2 = 100
+    # img_gaussian_1 = add_Gaussian_noise(img, noise_level1=l1 * 0.5, noise_level2=l2 * 0.5)
+    # l1 = 80
+    # l2 = 100
+    # img_gaussian_2 = add_Gaussian_noise(img, noise_level1=l1 * 0.5, noise_level2=l2 * 0.5)
+    # img_poisson = add_Poisson_noise(img)
+    # img_speckle = add_speckle_noise(img)
+    # img_jpeg = add_JPEG_noise(img)
+    # img_enhance = enhance(img)
+
+    device = torch.device('cuda')
+    val_dataset = SBI_Dataset(phase = 'val', image_size = 380)
+    val_loader=torch.utils.data.DataLoader(val_dataset,
+                        batch_size=1,
+                        shuffle=True,
+                        collate_fn=val_dataset.collate_fn,
+                        num_workers=4,
+                        pin_memory=True,
+                        worker_init_fn=val_dataset.worker_init_fn
+                        )
+    for step, data in enumerate(tqdm(val_loader)):
+        img = data['img'].to(device, non_blocking=True).float()
+        degraded_list = []
+        for i in range(img.size(0)):
+            single_img_tensor = img[i]             # (C, H, W)
     
-    for i in range(20):
-        #img_lq, img_hq = degradation_bsrgan(img, sf=sf, lq_patchsize=72)
-        print(i)
-        lq_nearest =  cv2.resize(util.single2uint(img_lq), (int(sf*img_lq.shape[1]), int(sf*img_lq.shape[0])), interpolation=0)
-        img_concat = np.concatenate([lq_nearest, util.single2uint(img_hq)], axis=1)
-        util.imsave(img_concat, str(i)+'.png')
+            single_img_np = single_img_tensor.cpu().numpy()  # (C, H, W)
+            single_img_np = np.transpose(single_img_np, (1, 2, 0))  # (H, W, C) si nécessaire
+            degraded_img_np = degradation(single_img_np, val_dataset.image_list, val_dataset.path_lm)
+    
+            # Reconvertir en tensor (C, H, W)
+            degraded_img_np = np.transpose(degraded_img_np, (2, 0, 1))  # (C, H, W)
+            degraded_img_tensor = torch.from_numpy(degraded_img_np).to(device).float()
+    
+            degraded_list.append(degraded_img_tensor)
 
-#    for i in range(10):
-#        img_lq, img_hq = degradation_bsrgan_plus(img, sf=sf, shuffle_prob=0.1, use_sharp=True, lq_patchsize=64)
-#        print(i)
-#        lq_nearest =  cv2.resize(util.single2uint(img_lq), (int(sf*img_lq.shape[1]), int(sf*img_lq.shape[0])), interpolation=0)
-#        img_concat = np.concatenate([lq_nearest, util.single2uint(img_hq)], axis=1)
-#        util.imsave(img_concat, str(i)+'.png')
+        # Empiler pour obtenir un batch final
+        degraded_img_batch = torch.stack(degraded_list, dim=0) 
+#     img = util.imread_uint('utils/test.png', 3)
+#     img = util.uint2single(img)
+#     sf = 4
+    
+#     for i in range(20):
+#         #img_lq, img_hq = degradation_bsrgan(img, sf=sf, lq_patchsize=72)
+#         print(i)
+#         lq_nearest =  cv2.resize(util.single2uint(img_lq), (int(sf*img_lq.shape[1]), int(sf*img_lq.shape[0])), interpolation=0)
+#         img_concat = np.concatenate([lq_nearest, util.single2uint(img_hq)], axis=1)
+#         util.imsave(img_concat, str(i)+'.png')
 
-#    run utils/utils_blindsr.py
+# #    for i in range(10):
+# #        img_lq, img_hq = degradation_bsrgan_plus(img, sf=sf, shuffle_prob=0.1, use_sharp=True, lq_patchsize=64)
+# #        print(i)
+# #        lq_nearest =  cv2.resize(util.single2uint(img_lq), (int(sf*img_lq.shape[1]), int(sf*img_lq.shape[0])), interpolation=0)
+# #        img_concat = np.concatenate([lq_nearest, util.single2uint(img_hq)], axis=1)
+# #        util.imsave(img_concat, str(i)+'.png')
+
+# #    run utils/utils_blindsr.py
