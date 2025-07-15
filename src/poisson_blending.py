@@ -6,8 +6,9 @@ CS 6745 Final Project Fall 2017
 """
 
 import numpy as np
-from scipy.sparse import linalg as linalg
 from scipy.sparse import lil_matrix as lil_matrix
+from scipy.sparse import linalg as splinalg
+from scipy.sparse import csr_matrix
 
 # Helper enum
 OMEGA = 0
@@ -57,52 +58,71 @@ def get_surrounding(index):
     return [(i+1,j),(i-1,j),(i,j+1),(i,j-1)]
 
 # Create the A sparse matrix
-def poisson_sparse_matrix(points):
-    # N = number of points in mask
+def poisson_sparse_matrix(points, point_to_idx):
     N = len(points)
-    A = lil_matrix((N,N))
-    # Set up row for each point in mask
-    for i,index in enumerate(points):
-        # Should have 4's diagonal
-        A[i,i] = 4
-        # Get all surrounding points
-        for x in get_surrounding(index):
-            # If a surrounding point is in the mask, add -1 to index's
-            # row at correct position
-            if x not in points: continue
-            j = points.index(x)
-            A[i,j] = -1
+    row, col, data = [], [], []
+
+    for idx, point in enumerate(points):
+        row.append(idx)
+        col.append(idx)
+        data.append(4)
+
+        for nb in get_surrounding(point):
+            if nb in point_to_idx:
+                j = point_to_idx[nb]
+                row.append(idx)
+                col.append(j)
+                data.append(-1)
+
+    A = csr_matrix((data, (row, col)), shape=(N, N))
     return A
 
-# Main method
-# Does Poisson image editing on one channel given a source, target, and mask
-def process(source, target, mask):
-    indicies = mask_indicies(mask)
-    N = len(indicies)
-    # Create poisson A matrix. Contains mostly 0's, some 4's and -1's
-    A = poisson_sparse_matrix(indicies)
-    # Create B matrix
-    b = np.zeros(N)
-    for i,index in enumerate(indicies):
-        # Start with left hand side of discrete equation
-        b[i] = lapl_at_index(source, index)
-        # If on boundry, add in target intensity
-        # Creates constraint lapl source = target at boundary
-        if point_location(index, mask) == DEL_OMEGA:
-            for pt in get_surrounding(index):
-                if in_omega(pt,mask) == False:
-                    b[i] += target[pt]
 
-    # Solve for x, unknown intensities
-    x = linalg.cg(A, b)
-    # Copy target photo, make sure as int
-    composite = np.copy(target).astype(int)
-    # Place new intensity on target at given index
-    for i,index in enumerate(indicies):
-        composite[index] = x[0][i]
+def process(source, target, mask):
+    indicies = list(mask_indicies(mask))
+    N = len(indicies)
+
+    point_to_idx = {pt: idx for idx, pt in enumerate(indicies)}
+    A = poisson_sparse_matrix(indicies, point_to_idx)
+
+    from scipy.ndimage import laplace
+    source_lap = laplace(source, mode='nearest')
+
+    b = np.zeros(N)
+    for i, index in enumerate(indicies):
+        b[i] = source_lap[index]
+        if point_location(index, mask) == DEL_OMEGA:
+            # Faster: sum boundary contributions with list comprehension
+            b[i] += sum(target[pt] for pt in get_surrounding(index) if not in_omega(pt, mask))
+
+    # Solve using conjugate gradient
+    x, info = splinalg.cg(A, b, tol=1e-5, maxiter=1500)
+    if info != 0:
+        print(f"CG did not converge, falling back to spsolve (info: {info})")
+        x = splinalg.spsolve(A, b)
+
+    composite = np.copy(target).astype(np.float32)
+    indices_i, indices_j = zip(*indicies)
+    composite[indices_i, indices_j] = np.clip(x, 0, 255)
+
     return composite
+
 
 # Naive blend, puts the source region directly on the target.
 # Useful for testing
 def preview(source, target, mask):
     return (target * (1.0 - mask)) + (source * (mask))
+
+def poisson_blend(source, target, mask):
+    # source_img = cv2.imread(source_names[0], cv2.IMREAD_COLOR)
+    # target_img = cv2.imread(target_names[0], cv2.IMREAD_COLOR)
+    # mask_img = cv2.imread(mask_names[0], cv2.IMREAD_GRAYSCALE)
+
+    # Make mask binary
+    mask[mask != 0] = 1
+    channels = source.shape[-1]
+    # Call the poisson method on each individual channel
+    result_stack = [process(source[:,:,i], target[:,:,i], mask) for i in range(channels)]
+    # Merge the channels back into one image
+    result = np.stack(result_stack, axis=-1)
+    return result

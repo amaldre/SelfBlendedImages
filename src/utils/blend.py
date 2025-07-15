@@ -11,7 +11,11 @@ from skimage.measure import label, regionprops
 import random
 from PIL import Image
 import sys
+from poisson_blending import poisson_blend
+import os
+import cv2
 
+COUNTER = 0
 
 
 def alpha_blend(source,target,mask):
@@ -19,13 +23,27 @@ def alpha_blend(source,target,mask):
 	img_blended=(mask_blured * source + (1 - mask_blured) * target)
 	return img_blended,mask_blured
 
-def dynamic_blend(source,target,mask):
+def apply_blend(source, target, mask, poisson_prob, poisson):
+	global COUNTER
 	mask_blured = get_blend_mask(mask)
 	blend_list=[0.25,0.5,0.75,1,1,1]
 	blend_ratio = blend_list[np.random.randint(len(blend_list))]
-	mask_blured*=blend_ratio
-	img_blended=(mask_blured * source + (1 - mask_blured) * target)
-	return img_blended,mask_blured
+	mask_blured*=blend_ratio	
+	# img_blended_alpha = (mask_blured * source + (1 - mask_blured) * target)
+	# img_blended_poisson = poisson_blend(source, target, mask_blured)
+	# save_dir = 'debug_blending'
+	# os.makedirs(save_dir, exist_ok=True)
+	# cv2.imwrite(os.path.join(save_dir, f"{COUNTER}_alpha.png"), cv2.cvtColor(img_blended_alpha.astype(np.uint8), cv2.COLOR_RGB2BGR))
+	# cv2.imwrite(os.path.join(save_dir, f"{COUNTER}_poisson.png"), cv2.cvtColor(img_blended_poisson.astype(np.uint8), cv2.COLOR_RGB2BGR))
+	# COUNTER += 1
+	if poisson:
+		if random.random() < poisson_prob:
+			img_blended = poisson_blend(source, target, mask_blured)
+		else: 
+			img_blended=(mask_blured * source + (1 - mask_blured) * target)
+	else: 
+		img_blended=(mask_blured * source + (1 - mask_blured) * target)
+	return img_blended, mask_blured
 
 def get_blend_mask(mask):
 	H,W=mask.shape
