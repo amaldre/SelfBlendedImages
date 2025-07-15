@@ -6,5 +6,6 @@
     "use_wandb": 1,
     "lr": 0.001,
     "test_datasets": ["FF","CDF"],
-    "test_every": 5
+    "test_every": 5,
+    "PMM": 1
 }

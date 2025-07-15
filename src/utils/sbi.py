@@ -42,7 +42,7 @@ else:
 print(f"exist_bi: {exist_bi}")
 
 class SBI_Dataset(Dataset):
-	def __init__(self,phase='train',image_size=224,n_frames=8):
+	def __init__(self,phase='train',image_size=224,n_frames=8, PMM = False):
 		
 		assert phase in ['train','val','test']
 		
@@ -64,7 +64,7 @@ class SBI_Dataset(Dataset):
 
 		self.transforms=self.get_transforms()
 		self.source_transforms = self.get_source_transforms()
-
+		self.PMM = PMM
 
 	def __len__(self):
 		return len(self.image_list)
@@ -106,10 +106,10 @@ class SBI_Dataset(Dataset):
 				img_r,img_f,mask_f=self.self_blending(img.copy(),landmark.copy())
 				
 				#Augment during training
-				# if self.phase=='train':
-				# 	transformed=self.transforms(image=img_f.astype('uint8'),image1=img_r.astype('uint8'))
-				# 	img_f=transformed['image']
-				# 	img_r=transformed['image1']
+				if self.phase=='train' and not self.PMM:
+					transformed=self.transforms(image=img_f.astype('uint8'),image1=img_r.astype('uint8'))
+					img_f=transformed['image']
+					img_r=transformed['image1']
 					
 				
 				#Crop on fake image between 5 and 20% around face
