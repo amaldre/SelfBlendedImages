@@ -656,7 +656,6 @@ def degradation(img, image_list, path_lm, sf=4, lq_patchsize=64):
             img = add_JPEG_noise(img)
         elif i == 6 and random.random() < p:
             img = enhance(img)
-        #TODO Distractors
         elif i == 7:
             img = add_distractors(img, image_list, path_lm, p_d)
         else:
