@@ -106,10 +106,10 @@ class SBI_Dataset(Dataset):
 				img_r,img_f,mask_f=self.self_blending(img.copy(),landmark.copy())
 				
 				#Augment during training
-				if self.phase=='train':
-					transformed=self.transforms(image=img_f.astype('uint8'),image1=img_r.astype('uint8'))
-					img_f=transformed['image']
-					img_r=transformed['image1']
+				# if self.phase=='train':
+				# 	transformed=self.transforms(image=img_f.astype('uint8'),image1=img_r.astype('uint8'))
+				# 	img_f=transformed['image']
+				# 	img_r=transformed['image1']
 					
 				
 				#Crop on fake image between 5 and 20% around face
