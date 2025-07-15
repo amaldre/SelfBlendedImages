@@ -25,6 +25,27 @@ from inference.datasets import *
 
 import matplotlib.pyplot as plt
 
+from degradations import degradation
+
+def get_degraded_batch(img_batch, image_list, path_lm, device):
+    degraded_list = []
+    for i in range(img_batch.size(0)):
+        single_img_tensor = img_batch[i]             # (C, H, W)
+    
+        single_img_np = single_img_tensor.cpu().numpy()  # (C, H, W)
+        single_img_np = np.transpose(single_img_np, (1, 2, 0))  # (H, W, C) si nécessaire
+        degraded_img_np = degradation(single_img_np, image_list, path_lm)
+    
+        # Reconvertir en tensor (C, H, W)
+        degraded_img_np = np.transpose(degraded_img_np, (2, 0, 1))  # (C, H, W)
+        degraded_img_tensor = torch.from_numpy(degraded_img_np).to(device).float()
+
+        degraded_list.append(degraded_img_tensor)
+
+        # Empiler pour obtenir un batch final
+    degraded_img_batch = torch.stack(degraded_list, dim=0) 
+    return degraded_img_batch
+
 def test(model_path, dataset, plot_bool):
     args = argparse.Namespace(
     weight_name=model_path,
@@ -41,6 +62,7 @@ def compute_accuray(pred,true):
 def main(args):
     cfg=load_json(args.config)
     USE_WANDB = cfg['use_wandb'] == 1
+    DEGRADATIONS = cfg['degradations'] == 1
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -54,8 +76,8 @@ def main(args):
 
     image_size=cfg['image_size']
     batch_size=cfg['batch_size']
-    train_dataset=SBI_Dataset(phase='train',image_size=image_size)
-    val_dataset=SBI_Dataset(phase='val',image_size=image_size)
+    train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS)
+    val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS)
    
     train_loader=torch.utils.data.DataLoader(train_dataset,
                         batch_size=batch_size//2,
@@ -129,6 +151,8 @@ def main(args):
 
         for step, data in enumerate(tqdm(train_loader)):
             img = data['img'].to(device, non_blocking=True).float()
+            if DEGRADATIONS:
+                img = get_degraded_batch(img, train_dataset.image_list, train_dataset.path_lm, device)
             target = data['label'].to(device, non_blocking=True).long()
 
             output = model.training_step(img, target)
@@ -144,7 +168,6 @@ def main(args):
             train_probs.append(probs[:, 1].detach().cpu())  # Assuming binary classification
             train_targets.append(target.detach().cpu())
 
-        lr_scheduler.step()
         train_losses.append(train_loss / len(train_loader))
         train_accs.append(train_acc / len(train_loader))
 
@@ -169,6 +192,8 @@ def main(args):
         np.random.seed(seed)
         for step, data in enumerate(tqdm(val_loader)):
             img = data['img'].to(device, non_blocking=True).float()
+            if DEGRADATIONS:
+                img = get_degraded_batch(img, val_dataset.image_list, val_dataset.path_lm, device)
             target = data['label'].to(device, non_blocking=True).long()
 
             with torch.no_grad():
@@ -192,7 +217,7 @@ def main(args):
             val_acc / len(val_loader),
             val_auc
         )
-
+        
         if USE_WANDB:
             wandb.log({
                 'Val/Loss': val_loss / len(val_loader),
@@ -201,8 +226,11 @@ def main(args):
                 'Train/Loss': train_loss / len(train_loader),
                 'Train/Accuracy': train_acc / len(train_loader),
                 'Train/AUC': train_auc,
+                'Train/LearningRate': model.optimizer.param_groups[0]['lr'],
                 'epoch': epoch
             })
+
+        lr_scheduler.step()
 
 
         if len(weight_dict) < n_weight or epoch == n_epoch - 1:
