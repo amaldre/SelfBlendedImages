@@ -195,7 +195,7 @@ def init_custom_folder(video_root, label):
 	return folder_list, label_list, video_root
 
 def init_alexandre():
-	video_root = 'alexandre'
+	video_root = 'ShareIdFake/output'
 	return init_custom_folder(video_root, 1)
 
 def init_alexandre_pristine():
