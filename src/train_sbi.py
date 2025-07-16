@@ -64,6 +64,7 @@ def main(args):
     USE_WANDB = cfg['use_wandb'] == 1
     DEGRADATIONS = cfg['degradations'] == 1
     POISSON = cfg['poisson'] == 1
+    RANDOM_MASK = cfg['random_mask'] == 1
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -77,8 +78,8 @@ def main(args):
 
     image_size=cfg['image_size']
     batch_size=cfg['batch_size']
-    train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON)
-    val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON)
+    train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
    
     train_loader=torch.utils.data.DataLoader(train_dataset,
                         batch_size=batch_size//2,

@@ -42,7 +42,7 @@ else:
 print(f"exist_bi: {exist_bi}")
 
 class SBI_Dataset(Dataset):
-	def __init__(self,phase='train',image_size=224,n_frames=8, degradations = False, poisson = False):
+	def __init__(self,phase='train',image_size=224,n_frames=8, degradations = False, poisson = False, random_mask = False):
 		
 		assert phase in ['train','val','test']
 		
@@ -66,6 +66,7 @@ class SBI_Dataset(Dataset):
 		self.source_transforms = self.get_source_transforms()
 		self.degradations = degradations
 		self.poisson = poisson
+		self.random_mask = random_mask
 
 
 	def __len__(self):
@@ -105,7 +106,7 @@ class SBI_Dataset(Dataset):
 				img,landmark,bbox,__=crop_face(img,landmark,bbox,margin=True,crop_by_bbox=False)
 
 				#Get self blending pristine and fake 
-				img_r,img_f,mask_f=self.self_blending(img.copy(),landmark.copy(), self.poisson)
+				img_r,img_f,mask_f=self.self_blending(img.copy(),landmark.copy(), self.poisson, self.random_mask)
 				
 				#Augment during training
 				if self.phase=='train' and not self.degradations:
@@ -188,7 +189,7 @@ class SBI_Dataset(Dataset):
 		return img,mask
 
 		
-	def self_blending(self,img,landmark, poisson):
+	def self_blending(self,img,landmark, poisson, random_mask):
 		p_p = 0.5
 
 		H,W=len(img),len(img[0])
@@ -196,7 +197,7 @@ class SBI_Dataset(Dataset):
 			landmark=landmark[:68]
 		if exist_bi:
 			logging.disable(logging.FATAL)
-			mask=random_get_hull(landmark,img)[:,:,0]
+			mask=random_get_hull(landmark, img, random_mask)[:,:,0]
 			logging.disable(logging.NOTSET)
 		else:
 			mask=np.zeros_like(img[:,:,0])

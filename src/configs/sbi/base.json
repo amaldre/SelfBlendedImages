@@ -8,5 +8,6 @@
     "test_datasets": ["FF","CDF"],
     "test_every": 5,
     "degradations": 1,
-    "poisson": 1
+    "poisson": 1,
+    "random_mask": 1
 }
