@@ -116,9 +116,19 @@ class random_component(Mask):
         r_eye = self.get_right_eye()
         l_eye = self.get_left_eye()
         nose = self.get_nose()
-        parts = [r_jaw, l_jaw, r_cheek, l_cheek, nose_ridge, r_eye, l_eye, nose]
+        parts = [
+        ("r_jaw", r_jaw),
+        ("l_jaw", l_jaw),
+        ("r_cheek", r_cheek),
+        ("l_cheek", l_cheek),
+        ("nose_ridge", nose_ridge),
+        ("r_eye", r_eye),
+        ("l_eye", l_eye),
+        ("nose", nose)
+        ]
+        name, chosen_part = random.choice(parts)
+        #print("Chosen part:", name)
         mask = np.zeros(self.face.shape[0:2] + (1, ), dtype = np.float32)
-        chosen_part = random.choice(parts)
         merged = np.concatenate(chosen_part)
         cv2.fillConvexPoly(mask, cv2.convexHull(merged), 255.)
         return mask
