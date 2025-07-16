@@ -11,7 +11,10 @@ from skimage.measure import label, regionprops
 import random
 from PIL import Image
 import sys
+import os
+import cv2
 
+COUNTER = 0
 
 
 def alpha_blend(source,target,mask):
@@ -19,13 +22,35 @@ def alpha_blend(source,target,mask):
 	img_blended=(mask_blured * source + (1 - mask_blured) * target)
 	return img_blended,mask_blured
 
-def dynamic_blend(source,target,mask):
+def poisson_blend_cv2(source, target, mask):
+
+	src_bgr = cv2.cvtColor(source, cv2.COLOR_RGB2BGR)
+	dst_bgr = cv2.cvtColor(target, cv2.COLOR_RGB2BGR)
+
+	# Choose center (middle of image)
+	center = (target.shape[1] // 2, target.shape[0] // 2)
+
+	binary_mask = (mask > 0).astype(np.uint8) * 255
+	# Seamless clone
+	br = cv2.boundingRect(binary_mask) # bounding rect (x,y,width,height)
+	centerOfBR = (br[0] + br[2] // 2, br[1] + br[3] // 2)
+	output_bgr = cv2.seamlessClone(src_bgr, dst_bgr, binary_mask, centerOfBR, cv2.NORMAL_CLONE)
+	output_rgb = cv2.cvtColor(output_bgr, cv2.COLOR_BGR2RGB)
+	return output_rgb
+
+def apply_blend(source, target, mask, poisson_prob, poisson):
 	mask_blured = get_blend_mask(mask)
 	blend_list=[0.25,0.5,0.75,1,1,1]
 	blend_ratio = blend_list[np.random.randint(len(blend_list))]
-	mask_blured*=blend_ratio
-	img_blended=(mask_blured * source + (1 - mask_blured) * target)
-	return img_blended,mask_blured
+	mask_blured*=blend_ratio	
+	if poisson:
+		if random.random() < poisson_prob:
+			img_blended = poisson_blend_cv2(source, target, mask_blured)
+		else: 
+			img_blended=(mask_blured * source + (1 - mask_blured) * target)
+	else: 
+		img_blended=(mask_blured * source + (1 - mask_blured) * target)
+	return img_blended, mask_blured
 
 def get_blend_mask(mask):
 	H,W=mask.shape
