@@ -16,13 +16,13 @@ from datasets import CROP_DIR
 from sklearn.metrics import confusion_matrix, roc_auc_score, accuracy_score, precision_score, recall_score, average_precision_score, roc_curve
 import warnings
 warnings.filterwarnings('ignore')
-
+from utils.sbi import get_final_transforms
 import pickle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def main(args):
     device = torch.device('cuda')
-
+    final_transforms = get_final_transforms()
     _, target_list, video_root = init_dataset(args.dataset)
 
     data_path = os.path.join(CROP_DIR, video_root, 'video_data.pkl')
@@ -45,6 +45,8 @@ def main(args):
 
             with torch.no_grad():
                 img=torch.tensor(face_list).to(device).float()/255
+                for i in range(img.shape[0]):
+                    img[i] = final_transforms(img[i])
                 pred=model(img).softmax(1)[:,1]
 
 

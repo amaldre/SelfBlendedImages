@@ -301,6 +301,9 @@ class SBI_Dataset(Dataset):
 	def worker_init_fn(self,worker_id):                                                          
 		np.random.seed(np.random.get_state()[1][0] + worker_id)
 
+def get_final_transforms():
+	return transforms.Lambda(lambda img: img * 2.0 - 1.0)
+
 if __name__=='__main__':
 	import blend as B
 	from initialize import *
