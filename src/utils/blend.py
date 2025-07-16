@@ -36,9 +36,8 @@ def poisson_blend_cv2(source, target, mask):
 	centerOfBR = (br[0] + br[2] // 2, br[1] + br[3] // 2)
 	output_bgr = cv2.seamlessClone(src_bgr, dst_bgr, binary_mask, centerOfBR, cv2.NORMAL_CLONE)
 	output_rgb = cv2.cvtColor(output_bgr, cv2.COLOR_BGR2RGB)
-	output_rgb_float = output_rgb.astype(np.float32) / 255.0
+	return output_rgb
 
-	return output_rgb_float
 def apply_blend(source, target, mask, poisson_prob, poisson):
 	mask_blured = get_blend_mask(mask)
 	blend_list=[0.25,0.5,0.75,1,1,1]
