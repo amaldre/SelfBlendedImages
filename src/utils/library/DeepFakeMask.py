@@ -119,7 +119,8 @@ class random_component(Mask):
         parts = [r_jaw, l_jaw, r_cheek, l_cheek, nose_ridge, r_eye, l_eye, nose]
         mask = np.zeros(self.face.shape[0:2] + (1, ), dtype = np.float32)
         chosen_part = random.choice(parts)
-        cv2.fillConvexPoly(mask, cv2.convexHull(chosen_part), 255.)
+        merged = np.concatenate(chosen_part)
+        cv2.fillConvexPoly(mask, cv2.convexHull(merged), 255.)
         return mask
 
 class dfl_full(Mask):  # pylint: disable=invalid-name
