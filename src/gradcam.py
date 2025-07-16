@@ -17,7 +17,6 @@ from matplotlib import cm
 from model import Detector
 from torchvision import transforms
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils.sbi import get_final_transforms
 
 def overlay_mask(img: Image.Image, mask: Image.Image, colormap: str = "jet", alpha: float = 0.7) -> Image.Image:
     """Overlay a colormapped mask on a background image
@@ -72,7 +71,6 @@ def main():
     argparser.add_argument('--cuda', action='store_true', help='Running CAM with cuda')
     argparser.add_argument('--save_inverse', action='store_true', help='Saving the inverse of CAM')
     args = argparser.parse_args()
-    final_transforms = get_final_transforms()
     
 
     #Loading model based on path
@@ -90,7 +88,6 @@ def main():
     img = Image.open(args.image)
     transform = transforms.ToTensor()
     img_tensor = transform(img)
-    img_tensor = final_transforms(img_tensor)
     img_tensor = img_tensor.unsqueeze(0)
     img_tensor = img_tensor.cuda()
     img_tensor.requires_grad_(True)
