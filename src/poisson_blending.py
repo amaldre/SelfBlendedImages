@@ -101,7 +101,7 @@ def process(source, target, mask):
     for i,index in enumerate(indicies):
         val = x[0][i]
         val = np.clip(val, 0, 255)
-        composite[index] = x[0][i]
+        composite[index] = val
     return composite
 
 # Naive blend, puts the source region directly on the target.
