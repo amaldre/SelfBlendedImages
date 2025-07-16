@@ -14,6 +14,7 @@ import sys
 
 import cv2
 import numpy as np
+import random
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -104,6 +105,22 @@ class Mask():
     
     def get_nose(self):
         return (self.landmarks[27:31], self.landmarks[31:36])
+
+class random_component(Mask):
+    def build_mask(self):
+        r_jaw = self.get_right_jaw()
+        l_jaw = self.get_left_jaw()
+        r_cheek = self.get_right_cheek()
+        l_cheek = self.get_left_cheek()
+        nose_ridge = self.get_nose_ridge()
+        r_eye = self.get_right_eye()
+        l_eye = self.get_left_eye()
+        nose = self.get_nose()
+        parts = [r_jaw, l_jaw, r_cheek, l_cheek, nose_ridge, r_eye, l_eye, nose]
+        mask = np.zeros(self.face.shape[0:2] + (1, ), dtype = np.float32)
+        chosen_part = random.choice(parts)
+        cv2.fillConvexPoly(mask, cv2.convexHull(chosen_part), 255.)
+        return mask
 
 class dfl_full(Mask):  # pylint: disable=invalid-name
     """ DFL facial mask """
