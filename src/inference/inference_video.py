@@ -21,6 +21,7 @@ from preprocess import extract_frames
 import warnings
 import cv2
 warnings.filterwarnings('ignore')
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def main(args):
 
@@ -44,10 +45,10 @@ def main(args):
     video_name = os.path.splitext(os.path.basename(args.input_video))[0]
     output_dir = os.path.join("figures", "crops", video_name,  os.path.splitext(os.path.basename(args.weight_name))[0])
     os.makedirs(output_dir, exist_ok=True)
-
     # Save each cropped face with prediction written
     for i in range(len(face_list)):
         img = face_list[i]  # Shape: (C, H, W)
+
         img_cv = img.transpose(1, 2, 0)  # (H, W, C)
         img_cv = cv2.cvtColor(img_cv, cv2.COLOR_RGB2BGR)
 

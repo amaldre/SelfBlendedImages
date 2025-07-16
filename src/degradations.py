@@ -400,7 +400,7 @@ if __name__ == '__main__':
     os.makedirs(save_dir, exist_ok=True)
 
     device = torch.device('cuda')
-    val_dataset = SBI_Dataset(phase = 'val', image_size = 380, poisson = True)
+    val_dataset = SBI_Dataset(phase = 'val', image_size = 380, poisson = True, random_mask = True)
     val_loader=torch.utils.data.DataLoader(val_dataset,
                         batch_size=1,
                         shuffle=True,

@@ -18,6 +18,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 import pickle
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 def main(args):
     device = torch.device('cuda')

@@ -17,7 +17,6 @@ from matplotlib import cm
 from model import Detector
 from torchvision import transforms
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils.sbi import get_final_transforms
 from retinaface.pre_trained_models import get_model
 from preprocess import extract_frames
 
@@ -77,7 +76,6 @@ def main():
     print(args)
     
     device = torch.device('cuda')
-    final_transforms = get_final_transforms()
     #Loading model based on path
     model=Detector()
     cnn_sd=torch.load(args.weights)["model"]
@@ -96,7 +94,6 @@ def main():
     with torch.no_grad():
         img_tensor = torch.tensor(face_list).to(device).float() / 255
         for i in range(img_tensor.shape[0]):
-            img_tensor[i] = final_transforms(img_tensor[i])
             img_tensor[i] = img_tensor[i].unsqueeze(0)
             img_tensor[i] = img_tensor[i].cuda()
             img_tensor[i].requires_grad_(True)

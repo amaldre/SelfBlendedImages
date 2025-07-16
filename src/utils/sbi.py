@@ -42,7 +42,7 @@ else:
 print(f"exist_bi: {exist_bi}")
 
 class SBI_Dataset(Dataset):
-	def __init__(self,phase='train',image_size=224,n_frames=8, degradations = False, poisson = False):
+	def __init__(self,phase='train',image_size=224,n_frames=8, degradations = False, poisson = False, random_mask = False):
 		
 		assert phase in ['train','val','test']
 		
@@ -66,6 +66,8 @@ class SBI_Dataset(Dataset):
 		self.source_transforms = self.get_source_transforms()
 		self.degradations = degradations
 		self.poisson = poisson
+		self.random_mask = random_mask
+
 
 	def __len__(self):
 		return len(self.image_list)
@@ -104,7 +106,7 @@ class SBI_Dataset(Dataset):
 				img,landmark,bbox,__=crop_face(img,landmark,bbox,margin=True,crop_by_bbox=False)
 
 				#Get self blending pristine and fake 
-				img_r,img_f,mask_f=self.self_blending(img.copy(),landmark.copy(), self.poisson)
+				img_r,img_f,mask_f=self.self_blending(img.copy(),landmark.copy(), self.poisson, self.random_mask)
 				
 				#Augment during training
 				if self.phase=='train' and not self.degradations:
@@ -122,10 +124,11 @@ class SBI_Dataset(Dataset):
 				#Resize to config size
 				img_f=cv2.resize(img_f,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
 				img_r=cv2.resize(img_r,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
-				
+
 				#Transpose
 				img_f=img_f.transpose((2,0,1))
 				img_r=img_r.transpose((2,0,1))
+
 				flag=False
 			except Exception as e:
 				print(e)
@@ -133,8 +136,6 @@ class SBI_Dataset(Dataset):
 				idx=torch.randint(low=0,high=len(self),size=(1,)).item()
 		
 		return img_f,img_r
-
-	
 		
 	def get_source_transforms(self):
 		return alb.Compose([
@@ -188,7 +189,7 @@ class SBI_Dataset(Dataset):
 		return img,mask
 
 		
-	def self_blending(self,img,landmark, poisson):
+	def self_blending(self,img,landmark, poisson, random_mask):
 		p_p = 0.5
 
 		H,W=len(img),len(img[0])
@@ -196,7 +197,7 @@ class SBI_Dataset(Dataset):
 			landmark=landmark[:68]
 		if exist_bi:
 			logging.disable(logging.FATAL)
-			mask=random_get_hull(landmark,img)[:,:,0]
+			mask=random_get_hull(landmark, img, random_mask)[:,:,0]
 			logging.disable(logging.NOTSET)
 		else:
 			mask=np.zeros_like(img[:,:,0])
