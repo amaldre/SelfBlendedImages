@@ -42,7 +42,7 @@ else:
 print(f"exist_bi: {exist_bi}")
 
 class SBI_Dataset(Dataset):
-	def __init__(self,phase='train',image_size=224,n_frames=8, degradations = False):
+	def __init__(self,phase='train',image_size=224,n_frames=8, degradations = False, poisson = False):
 		
 		assert phase in ['train','val','test']
 		
@@ -65,6 +65,7 @@ class SBI_Dataset(Dataset):
 		self.transforms=self.get_transforms()
 		self.source_transforms = self.get_source_transforms()
 		self.degradations = degradations
+		self.poisson = poisson
 
 	def __len__(self):
 		return len(self.image_list)
@@ -103,7 +104,7 @@ class SBI_Dataset(Dataset):
 				img,landmark,bbox,__=crop_face(img,landmark,bbox,margin=True,crop_by_bbox=False)
 
 				#Get self blending pristine and fake 
-				img_r,img_f,mask_f=self.self_blending(img.copy(),landmark.copy())
+				img_r,img_f,mask_f=self.self_blending(img.copy(),landmark.copy(), self.poisson)
 				
 				#Augment during training
 				if self.phase=='train' and not self.degradations:
@@ -187,7 +188,9 @@ class SBI_Dataset(Dataset):
 		return img,mask
 
 		
-	def self_blending(self,img,landmark):
+	def self_blending(self,img,landmark, poisson):
+		p_p = 0.5
+
 		H,W=len(img),len(img[0])
 		if np.random.rand()<0.25:
 			landmark=landmark[:68]
@@ -208,7 +211,7 @@ class SBI_Dataset(Dataset):
 
 		source, mask = self.randaffine(source,mask)
 
-		img_blended,mask=B.dynamic_blend(source,img,mask)
+		img_blended,mask=B.apply_blend(source, img, mask, p_p, poisson)
 		img_blended = img_blended.astype(np.uint8)
 		img = img.astype(np.uint8)
 
