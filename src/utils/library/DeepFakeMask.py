@@ -127,7 +127,7 @@ class random_component(Mask):
         ("nose", nose)
         ]
         name, chosen_part = random.choice(parts)
-        print("Chosen part:", name)
+        #print("Chosen part:", name)
         mask = np.zeros(self.face.shape[0:2] + (1, ), dtype = np.float32)
         merged = np.concatenate(chosen_part)
         cv2.fillConvexPoly(mask, cv2.convexHull(merged), 255.)
