@@ -236,8 +236,15 @@ def enhance(img):
     return img_enhanced_np
 
 def choose_image(image_list, path_lm):
-    filename=random.choice(image_list)
-    img=np.array(Image.open(filename))
+    found = False
+    while not found:
+        filename = random.choice(image_list)
+        try:
+            img = np.array(Image.open(filename))
+            found = True
+        except : 
+            continue
+        
 	#Get dlib landmarks
     landmark=np.load(filename.replace('.png','.npy').replace('/frames/', path_lm))[0]
 	#Get dlib bounding landmarks
