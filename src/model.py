@@ -5,7 +5,7 @@ from torch.nn import functional as F
 from efficientnet_pytorch import EfficientNet
 from utils.sam import SAM
 
-
+import os
 
 class Detector(nn.Module):
 
@@ -15,11 +15,29 @@ class Detector(nn.Module):
         self.cel=nn.CrossEntropyLoss()
         self.optimizer=SAM(self.parameters(),torch.optim.SGD,lr=0.001, momentum=0.9)
         
+    def load_weights(self, weight_path):
+        state_dict = torch.load(weight_path, map_location="cpu")  # Change path as needed
+        # Optional: remove 'module.' prefix if the model was trained with DataParallel or DDP
+        # from collections import OrderedDict
+
+        # new_state_dict = OrderedDict()
+        # for k, v in state_dict.items():
+        #     new_key = k.replace("module.", "")  # Remove 'module.' if present
+        #     new_state_dict[new_key] = v
+
+        # Load weights
+        if os.path.exists(weight_path):
+            self.load_state_dict(state_dict, strict=True) # strict=True if you're sure all keys match
+            print(f"Loaded {weight_path} for training")
+        else:
+            print(f"Invalid path {weight_path}, training from scratch")
+
         
 
     def forward(self,x):
         x=self.net(x)
         return x
+    
     
     def training_step(self,x,target):
         for i in range(2):

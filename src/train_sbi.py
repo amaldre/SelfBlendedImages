@@ -100,7 +100,8 @@ def main(args):
                         )
     
     model=Detector()
-    
+    if len(args.weight_path):
+        model.load_weights(args.weight_path)
     model=model.to('cuda')
     
     
@@ -303,6 +304,7 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument(dest='config')
     parser.add_argument('-n',dest='session_name')
+    parser.add_argument('-w', dest = 'pretrained_weights', default = '')
     args=parser.parse_args()
     main(args)
         
