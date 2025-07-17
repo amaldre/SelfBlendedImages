@@ -8,7 +8,8 @@ from glob import glob
 import os
 import pandas as pd
 
-DATASHAREID = "/home/alicia/dataShareID"
+T7 = '/media/alicia/T7/ShareID/TestDataSets'
+DATASHAREID = "/media/alicia/dataShareID"
 CROP_DIR = 'crop_data'
 VID_EXTENSIONS = {'.mp4', '.mov', '.avi'}
 
@@ -35,6 +36,8 @@ def init_dataset(dataset):
 		video_list, target_list, video_root = init_ibeta()
 	elif dataset.upper() == 'VIDNOZ':
 		video_list, target_list, video_root = init_vidnoz()
+	elif dataset.upper() == 'ALEXANDRE_MASTER':
+		video_list, target_list, video_root = init_alexandre_master()
 	elif dataset.upper() == 'ALEXANDRE':
 		video_list, target_list, video_root = init_alexandre()
 	elif dataset.upper() == 'ALEXANDRE_PRISTINE':
@@ -135,7 +138,7 @@ def init_cdf():
 
 	label_list=[]
 
-	video_list_txt='/home/alicia/dataShareID/CelebDFv2/List_of_testing_videos.txt'
+	video_list_txt=os.path.join(DATASHAREID, 'CelebDFv2/List_of_testing_videos.txt')
 	video_root = 'CelebDFv2'
 	with open(video_list_txt) as f:
 		
@@ -149,17 +152,22 @@ def init_cdf():
 			label_list+=[1-int(line[0])]
 		return folder_list, label_list, video_root
 
-def read_custom_data(dataset_name, txt_name = 'List_of_testing_videos.txt'):
+def read_custom_data(dataset_name, txt_name = 'List_of_testing_videos.txt', base_data = DATASHAREID):
 	folder_list = []
 	label_list = []
-	with open(os.path.join(DATASHAREID, dataset_name, txt_name)) as f:
+	with open(os.path.join(base_data, dataset_name, txt_name)) as f:
 		for data in f:
 			line = data.split()
 			path = line[1]
-			folder_list += [os.path.join(DATASHAREID, dataset_name, path)]
+			folder_list += [os.path.join(base_data, dataset_name, path)]
 			label_list += [int(line[0])]
 	return folder_list, label_list
 
+def init_alexandre_master():
+	video_root = 'alexandre_master'
+	folder_list, label_list = read_custom_data(video_root, base_data = T7)
+	print(len(label_list))
+	return folder_list, label_list, video_root
 def init_guy():
 	video_root = 'GitW'
 	folder_list, label_list = read_custom_data(video_root)
