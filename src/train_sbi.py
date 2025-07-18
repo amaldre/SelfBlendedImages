@@ -8,7 +8,7 @@ from PIL import Image
 import sys
 import random
 from utils.sbi import SBI_Dataset, get_final_transforms
-from utils.scheduler import LinearDecayLR
+from utils.scheduler import LinearDecayLR, LinearDecayLR_LaaNet
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
 import argparse
 from utils.logs import log
@@ -65,6 +65,8 @@ def main(args):
     DEGRADATIONS = cfg['degradations'] == 1
     POISSON = cfg['poisson'] == 1
     RANDOM_MASK = cfg['random_mask'] == 1
+    FREEZE = cfg['freeze']
+    LR_SCHEDULER = cfg['lr_scheduler']
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -102,6 +104,8 @@ def main(args):
     model=Detector()
     if len(args.weight_path):
         model.load_weights(args.weight_path)
+    if FREEZE > 0:
+        model.freeze()
     model=model.to('cuda')
     
     
@@ -114,7 +118,13 @@ def main(args):
     val_accs=[]
     val_losses=[]
     n_epoch=cfg['epoch']
-    lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
+    if (LR_SCHEDULER.upper() == 'LAA-NET'):
+        lr_scheduler = LinearDecayLR_LaaNet(model.optimizer, n_epoch, n_epoch//4, last_epoch= -1, booster=4)
+    elif (LR_SCHEDULER.upper() == 'SBI'):
+        lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
+    else:
+        print('Unknown LR Scheduler, defaulting to SBI base scheduler')
+        lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
     #last_loss=99999
 
 
@@ -145,8 +155,11 @@ def main(args):
         )
 
     final_transforms = get_final_transforms()
-
+    needs_unfreezing = FREEZE > 0
     for epoch in range(n_epoch):
+        if needs_unfreezing and epoch >= FREEZE:
+            model.unfreeze()
+            needs_unfreezing = False
         np.random.seed(seed + epoch)
         train_loss = 0.
         train_acc = 0.

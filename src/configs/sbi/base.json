@@ -9,5 +9,7 @@
     "test_every": 5,
     "degradations": 1,
     "poisson": 1,
-    "random_mask": 1
+    "random_mask": 1,
+    "freeze": 6,
+    "lr_scheduler": "LAA-Net" 
 }

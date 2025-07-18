@@ -32,7 +32,20 @@ class Detector(nn.Module):
         else:
             print(f"Invalid path {weight_path}, training from scratch")
 
+    def freeze(self):
+        # Freeze all layers
+        for param in self.net.parameters():
+            param.requires_grad = False
+
+        # Unfreeze only the final classification layer
+        for param in self.net._fc.parameters():
+            param.requires_grad = True
+        print("------------- Model frozen -------------")
         
+    def unfreeze(self):
+        for param in self.net.parameters():
+            param.requires_grad = True
+        print("------------- Model unfrozen -------------")
 
     def forward(self,x):
         x=self.net(x)
