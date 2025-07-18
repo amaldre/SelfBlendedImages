@@ -3,7 +3,7 @@
     "epoch":100,
     "batch_size": 16,
     "image_size":380,
-    "use_wandb": 1,
+    "use_wandb": 0,
     "lr": 0.001,
     "test_datasets": ["FF","CDF"],
     "test_every": 5,
@@ -11,5 +11,6 @@
     "poisson": 1,
     "random_mask": 1,
     "freeze": 6,
-    "lr_scheduler": "LAA-Net" 
+    "lr_scheduler": "LAA-Net",
+    "weight_path":  ""
 }
