@@ -9,16 +9,18 @@ import os
 
 class Detector(nn.Module):
 
-    def __init__(self, lr, adam):
+    def __init__(self, backbone, lr = None, adam = None, phase = 'train'):
         super(Detector, self).__init__()
-        self.net=EfficientNet.from_pretrained("efficientnet-b4",advprop=True,num_classes=2)
-        self.cel=nn.CrossEntropyLoss()
-        if adam:
-            print("Using Adam optimizer")
-            self.optimizer = SAM(self.parameters(), torch.optim.Adam, lr=lr, weight_decay=1e-4)
-        else:
-            print("Using SGD optimizer")
-            self.optimizer=SAM(self.parameters(),torch.optim.SGD,lr=lr, momentum=0.9)
+        self.net=EfficientNet.from_pretrained(backbone, advprop=True,num_classes=2)
+        self.backbone = backbone
+        if phase == 'train':
+            self.cel=nn.CrossEntropyLoss()
+            if adam:
+                print("Using Adam optimizer")
+                self.optimizer = SAM(self.parameters(), torch.optim.Adam, lr=lr, weight_decay=1e-4)
+            else:
+                print("Using SGD optimizer")
+                self.optimizer=SAM(self.parameters(),torch.optim.SGD,lr=lr, momentum=0.9)
         
         
     def load_weights(self, weight_path):
