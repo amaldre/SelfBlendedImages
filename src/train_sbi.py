@@ -51,7 +51,7 @@ def test(model_path, dataset, plot_bool):
     args = argparse.Namespace(
     weight_name=model_path,
     dataset=dataset,
-    plot = plot_bool
+    plot = plot_bool,
     )
     return infer(args)
 
@@ -69,6 +69,7 @@ def main(args):
     FREEZE = cfg['freeze']
     LR_SCHEDULER = cfg['lr_scheduler']
     ADAM = cfg['adam'] == 1
+    BACKBONE = cfg['backbone']
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -82,7 +83,7 @@ def main(args):
 
     image_size=cfg['image_size']
     batch_size=cfg['batch_size']
-    train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    train_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
     val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
    
     train_loader=torch.utils.data.DataLoader(train_dataset,
@@ -103,7 +104,7 @@ def main(args):
                         worker_init_fn=val_dataset.worker_init_fn
                         )
     
-    model=Detector(lr = cfg['lr'], adam = ADAM)
+    model=Detector(lr = cfg['lr'], adam = ADAM, backbone = BACKBONE)
     if len(cfg["weight_path"]):
         model.load_weights(cfg["weight_path"])
     if FREEZE > 0:
@@ -267,7 +268,8 @@ def main(args):
             torch.save({
                 "model": model.state_dict(),
                 "optimizer": model.optimizer.state_dict(),
-                "epoch": epoch
+                "epoch": epoch,
+                'backbone': model.backbone,
             }, save_model_path)
             last_val_auc = min([weight_dict[k] for k in weight_dict])
         elif val_auc >= last_val_auc:
