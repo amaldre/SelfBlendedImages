@@ -8,7 +8,7 @@ from PIL import Image
 import sys
 import random
 from utils.sbi import SBI_Dataset, get_final_transforms
-from utils.scheduler import LinearDecayLR, LinearDecayLR_LaaNet
+from utils.scheduler import LinearDecayLR, LinearDecayLR_LaaNet, FlatCosineAnnealingLR
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
 import argparse
 from utils.logs import log
@@ -67,6 +67,7 @@ def main(args):
     RANDOM_MASK = cfg['random_mask'] == 1
     FREEZE = cfg['freeze']
     LR_SCHEDULER = cfg['lr_scheduler']
+    ADAM = cfg['adam'] == 1
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -80,7 +81,7 @@ def main(args):
 
     image_size=cfg['image_size']
     batch_size=cfg['batch_size']
-    train_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
     val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
    
     train_loader=torch.utils.data.DataLoader(train_dataset,
@@ -101,7 +102,7 @@ def main(args):
                         worker_init_fn=val_dataset.worker_init_fn
                         )
     
-    model=Detector()
+    model=Detector(lr = cfg['lr'], adam = ADAM)
     if len(cfg["weight_path"]):
         model.load_weights(cfg["weight_path"])
     if FREEZE > 0:
@@ -122,6 +123,8 @@ def main(args):
         lr_scheduler = LinearDecayLR_LaaNet(model.optimizer, n_epoch, n_epoch//4, last_epoch= -1, booster=4)
     elif (LR_SCHEDULER.upper() == 'SBI'):
         lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
+    elif (LR_SCHEDULER.upper() == 'COSINE'):
+        lr_scheduler = FlatCosineAnnealingLR(model.optimizer, n_epoch, FREEZE)
     else:
         print('Unknown LR Scheduler, defaulting to SBI base scheduler')
         lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
