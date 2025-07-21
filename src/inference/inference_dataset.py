@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import random
-from model import Detector
 import argparse
 from datetime import datetime
 from tqdm import tqdm
@@ -19,6 +18,7 @@ warnings.filterwarnings('ignore')
 import pickle
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from utils.sbi import get_final_transforms
+from model import Detector
 def main(args):
     device = torch.device('cuda')
     final_transforms = get_final_transforms()
@@ -28,7 +28,12 @@ def main(args):
     assert(os.path.exists(data_path))
     print("------Inference mode------")
     print(f"Testing model {os.path.basename(args.weight_name)}")
-    model=Detector()
+    try :
+        backbone=torch.load(args.weight_name)["backbone"]
+    except:
+        print("No backbone detected, defaulting to efficientnet-b4")
+        backbone = "efficientnet-b4"
+    model=Detector(backbone = backbone, phase = 'not train')
     model=model.to(device)
     cnn_sd=torch.load(args.weight_name)["model"]
     model.load_state_dict(cnn_sd)
@@ -144,6 +149,7 @@ if __name__=='__main__':
     parser.add_argument('-d',dest='dataset',type=str)
     parser.add_argument('-plot', dest='plot', action = 'store_true', default = False)
     parser.add_argument('-print', dest='print', action = 'store_true', default = False)
+    #parser.add_argument('-backbone', dest = 'backbone', default = 'efficientnet-b4')
     args=parser.parse_args()
 
     main(args)
