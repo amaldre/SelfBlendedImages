@@ -13,5 +13,6 @@
     "freeze": 0,
     "lr_scheduler": "PMM",
     "adam": 0,
+    "backbone": "efficient-netb0",
     "weight_path":  ""
 }
