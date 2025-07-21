@@ -9,6 +9,7 @@ import sys
 import random
 from utils.sbi import SBI_Dataset, get_final_transforms
 from utils.scheduler import LinearDecayLR, LinearDecayLR_LaaNet, FlatCosineAnnealingLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
 import argparse
 from utils.logs import log
@@ -125,6 +126,8 @@ def main(args):
         lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
     elif (LR_SCHEDULER.upper() == 'COSINE'):
         lr_scheduler = FlatCosineAnnealingLR(model.optimizer, n_epoch, FREEZE)
+    elif (LR_SCHEDULER.upper() == 'PMM'):
+        lr_scheduler = ReduceLROnPlateau(model.optimizer, mode='min', factor=0.2, patience=10, verbose=True)
     else:
         print('Unknown LR Scheduler, defaulting to SBI base scheduler')
         lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))

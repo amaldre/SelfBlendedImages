@@ -4,14 +4,14 @@
     "batch_size": 16,
     "image_size":380,
     "use_wandb": 0,
-    "lr": 0.00005,
+    "lr": 0.001,
     "test_datasets": ["FF","CDF"],
     "test_every": 5,
     "degradations": 1,
     "poisson": 1,
     "random_mask": 1,
     "freeze": 0,
-    "lr_scheduler": "SBI",
+    "lr_scheduler": "PMM",
     "adam": 0,
     "weight_path":  ""
 }
