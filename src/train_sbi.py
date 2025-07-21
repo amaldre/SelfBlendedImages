@@ -83,7 +83,7 @@ def main(args):
 
     image_size=cfg['image_size']
     batch_size=cfg['batch_size']
-    train_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
     val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
    
     train_loader=torch.utils.data.DataLoader(train_dataset,
