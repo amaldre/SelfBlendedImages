@@ -283,7 +283,8 @@ def main(args):
             torch.save({
                 "model": model.state_dict(),
                 "optimizer": model.optimizer.state_dict(),
-                "epoch": epoch
+                "epoch": epoch,
+                'backbone': model.backbone,
             }, save_model_path)
             last_val_auc = min([weight_dict[k] for k in weight_dict])
 
