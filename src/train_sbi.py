@@ -128,7 +128,7 @@ def main(args):
     elif (LR_SCHEDULER.upper() == 'COSINE'):
         lr_scheduler = FlatCosineAnnealingLR(model.optimizer, n_epoch, FREEZE)
     elif (LR_SCHEDULER.upper() == 'PMM'):
-        lr_scheduler = ReduceLROnPlateau(model.optimizer, mode='min', factor=0.2, patience=10, verbose=True)
+        lr_scheduler = ReduceLROnPlateau(model.optimizer, mode='min', factor=0.2, patience=10)
     else:
         print('Unknown LR Scheduler, defaulting to SBI base scheduler')
         lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
@@ -246,10 +246,10 @@ def main(args):
             val_acc / len(val_loader),
             val_auc
         )
-        
+        val_loss = val_loss/len(val_loader)
         if USE_WANDB:
             wandb.log({
-                'Val/Loss': val_loss / len(val_loader),
+                'Val/Loss': val_loss,
                 'Val/Accuracy': val_acc / len(val_loader),
                 'Val/AUC': val_auc,
                 'Train/Loss': train_loss / len(train_loader),
@@ -259,7 +259,10 @@ def main(args):
                 'epoch': epoch
             })
 
-        lr_scheduler.step()
+        if (LR_SCHEDULER.upper() == 'PMM'):
+            lr_scheduler.step(val_loss)
+        else:
+            lr_scheduler.step()
 
 
         if len(weight_dict) < n_weight or epoch == n_epoch - 1:
