@@ -7,7 +7,7 @@ import os
 from PIL import Image
 import sys
 import random
-from utils.sbi import SBI_Dataset, get_final_transforms
+from utils.sbi import SBI_Dataset
 from utils.scheduler import LinearDecayLR, LinearDecayLR_LaaNet, FlatCosineAnnealingLR
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
@@ -26,32 +26,31 @@ from inference.datasets import *
 
 import matplotlib.pyplot as plt
 
-from degradations import degradation
-
-def get_degraded_batch(img_batch, image_list, path_lm, device):
-    degraded_list = []
-    for i in range(img_batch.size(0)):
-        single_img_tensor = img_batch[i]             # (C, H, W)
+# def get_degraded_batch(img_batch, image_list, path_lm, device):
+#     degraded_list = []
+#     for i in range(img_batch.size(0)):
+#         single_img_tensor = img_batch[i]             # (C, H, W)
     
-        single_img_np = single_img_tensor.cpu().numpy()  # (C, H, W)
-        single_img_np = np.transpose(single_img_np, (1, 2, 0))  # (H, W, C) si nécessaire
-        degraded_img_np = degradation(single_img_np, image_list, path_lm)
+#         single_img_np = single_img_tensor.cpu().numpy()  # (C, H, W)
+#         single_img_np = np.transpose(single_img_np, (1, 2, 0))  # (H, W, C) si nécessaire
+#         degraded_img_np = degradation(single_img_np, image_list, path_lm)
     
-        # Reconvertir en tensor (C, H, W)
-        degraded_img_np = np.transpose(degraded_img_np, (2, 0, 1))  # (C, H, W)
-        degraded_img_tensor = torch.from_numpy(degraded_img_np).to(device).float()
+#         # Reconvertir en tensor (C, H, W)
+#         degraded_img_np = np.transpose(degraded_img_np, (2, 0, 1))  # (C, H, W)
+#         degraded_img_tensor = torch.from_numpy(degraded_img_np).to(device).float()
 
-        degraded_list.append(degraded_img_tensor)
+#         degraded_list.append(degraded_img_tensor)
 
-        # Empiler pour obtenir un batch final
-    degraded_img_batch = torch.stack(degraded_list, dim=0) 
-    return degraded_img_batch
+#         # Empiler pour obtenir un batch final
+#     degraded_img_batch = torch.stack(degraded_list, dim=0) 
+#     return degraded_img_batch
 
 def test(model_path, dataset, plot_bool):
     args = argparse.Namespace(
     weight_name=model_path,
     dataset=dataset,
-    plot = plot_bool,
+    plot = plot_bool, 
+    confmat = False
     )
     return infer(args)
 
@@ -106,7 +105,8 @@ def main(args):
     
     model=Detector(lr = cfg['lr'], adam = ADAM, backbone = BACKBONE)
     if len(cfg["weight_path"]):
-        model.load_weights(cfg["weight_path"])
+        cnn_sd = torch.load(cfg["weight_path"])["model"]
+        model.load_state_dict(cnn_sd)
     if FREEZE > 0:
         model.freeze()
     model=model.to('cuda')
@@ -161,13 +161,14 @@ def main(args):
             resume=False
         )
 
-    final_transforms = get_final_transforms()
+    #final_transforms = get_final_transforms()
     needs_unfreezing = FREEZE > 0
     for epoch in range(n_epoch):
         if needs_unfreezing and epoch >= FREEZE:
             model.unfreeze()
             needs_unfreezing = False
         np.random.seed(seed + epoch)
+        random.seed(seed + epoch) 
         train_loss = 0.
         train_acc = 0.
         train_probs = []
@@ -176,10 +177,6 @@ def main(args):
 
         for step, data in enumerate(tqdm(train_loader)):
             img = data['img'].to(device, non_blocking=True).float()
-            if DEGRADATIONS:
-                img = get_degraded_batch(img, train_dataset.image_list, train_dataset.path_lm, device)
-            for i in range(img.size(0)):
-                img[i] = final_transforms(img[i])
             target = data['label'].to(device, non_blocking=True).long()
 
             output = model.training_step(img, target)
@@ -219,10 +216,6 @@ def main(args):
         np.random.seed(seed)
         for step, data in enumerate(tqdm(val_loader)):
             img = data['img'].to(device, non_blocking=True).float()
-            if DEGRADATIONS:
-                img = get_degraded_batch(img, val_dataset.image_list, val_dataset.path_lm, device)
-            for i in range(img.size(0)):
-                img[i] = final_transforms(img[i])
             target = data['label'].to(device, non_blocking=True).long()
 
             with torch.no_grad():
@@ -291,7 +284,7 @@ def main(args):
             }, save_model_path)
             last_val_auc = min([weight_dict[k] for k in weight_dict])
 
-        if (not epoch % cfg["test_every"]):
+        if (not epoch % cfg["test_every"] or epoch == n_epoch - 1):
             best_model = max(weight_dict, key=weight_dict.get)
             if (not best_model in val_set):
                 val_set.add(best_model)

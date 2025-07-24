@@ -39,6 +39,9 @@ else:
     print('library or bi_online_generation.py does not exist at the expected path.')
     exist_bi = False
 
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from degradations import degradation
 print(f"exist_bi: {exist_bi}")
 
 class SBI_Dataset(Dataset):
@@ -67,6 +70,7 @@ class SBI_Dataset(Dataset):
 		self.degradations = degradations
 		self.poisson = poisson
 		self.random_mask = random_mask
+		self.final_transforms = get_final_transforms()
 
 
 	def __len__(self):
@@ -124,6 +128,13 @@ class SBI_Dataset(Dataset):
 				#Resize to config size
 				img_f=cv2.resize(img_f,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
 				img_r=cv2.resize(img_r,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
+
+				if (self.degradations):
+					img_f = degradation(img_f, self.image_list, self.path_lm)
+					img_r = degradation(img_r, self.image_list, self.path_lm)
+
+				img_f = self.final_transforms(img_f)
+				img_r = self.final_transforms(img_r)
 
 				#Transpose
 				img_f=img_f.transpose((2,0,1))
