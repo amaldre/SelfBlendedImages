@@ -17,7 +17,8 @@ class Detector(nn.Module):
             self.cel=nn.CrossEntropyLoss()
             if adam:
                 print("Using Adam optimizer")
-                self.optimizer = SAM(self.parameters(), torch.optim.Adam, lr=lr, weight_decay=1e-4)
+                self.optimizer = SAM(self.parameters(), torch.optim.AdamW, lr=lr, #weight_decay=1e-4
+                                     )
             else:
                 print("Using SGD optimizer")
                 self.optimizer=SAM(self.parameters(),torch.optim.SGD,lr=lr, momentum=0.9)
