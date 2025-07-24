@@ -12,7 +12,6 @@ from scipy.linalg import orth
 from PIL import Image, ImageEnhance
 import string
 from utils.funcs import IoUfrom2bboxes, crop_face
-from utils.sbi import SBI_Dataset
 from tqdm import tqdm
 from torchvision.utils import save_image
 import os
@@ -114,16 +113,17 @@ def uniform_Gaussian(size):
 
 def add_blur(img, s):
     choice = random.choice([0, 1, 2])
+    base = 13
     if choice == 0:
-        wd = 30 * s
+        wd = int(base * s)
         l1 = wd*random.random()
         l2 = wd*random.random()
         k = anisotropic_Gaussian(ksize=2*random.randint(2,11)+3, theta=random.random()*np.pi, l1=l1, l2=l2)
     elif choice == 1:
-        wd = 30 * s
+        wd = int(base * s)
         k = fspecial('gaussian', 2*random.randint(2,11)+3, wd*random.random())
     elif choice == 2:
-        w = np.random.randint(3, 30* s + 1)
+        w = np.random.randint(3, int(base* s + 1))
         k = uniform_Gaussian(w)
     img = ndimage.filters.convolve(img, np.expand_dims(k, axis=2), mode='mirror')
     return img
@@ -147,7 +147,7 @@ def add_Gaussian_noise(img, noise_level1=2, noise_level2=25):
     # Convert image to float32 in [0, 1] range if not already
     img = img.astype(np.float32)
 
-    noise_level = random.randint(noise_level1, noise_level2)
+    noise_level = random.randint(int(noise_level1), int(noise_level2))
     rnum = np.random.rand()
 
     if rnum > 0.6:  # add color Gaussian noise
@@ -175,7 +175,7 @@ def add_Gaussian_noise(img, noise_level1=2, noise_level2=25):
 
 #TODO figure out what to do with this
 def add_speckle_noise(img, noise_level1=2, noise_level2=25):
-    noise_level = random.randint(noise_level1, noise_level2)
+    noise_level = random.randint(int(noise_level1), int(noise_level2))
     img = np.clip(img, 0.0, 1.0)
     rnum = random.random()
     if rnum > 0.6:
@@ -207,7 +207,7 @@ def add_Poisson_noise(img):
 
 
 def add_JPEG_noise(img):
-    quality_factor = random.randint(10, 95)
+    quality_factor = random.randint(80, 95)
     img = cv2.cvtColor(np.uint8((img.clip(0, 1)*255.).round()), cv2.COLOR_RGB2BGR)
     result, encimg = cv2.imencode('.jpg', img, [int(cv2.IMWRITE_JPEG_QUALITY), quality_factor])
     img = cv2.imdecode(encimg, 1)
@@ -236,6 +236,7 @@ def enhance(img):
     return img_enhanced_np
 
 def choose_image(image_list, path_lm):
+    from utils.sbi import SBI_Dataset
     found = False
     while not found:
         filename = random.choice(image_list)
@@ -343,9 +344,9 @@ def degradation(img, image_list, path_lm):
 
     shuffle_order = random.sample(range(8), 8)
 
-    p = 0.5
-    p_d = 0.2
-    s = 0.5
+    p = 0.25
+    p_d = 0.15
+    s = 1/3
 
     for i in shuffle_order:
         if i == 0 and random.random() < p:
@@ -354,11 +355,11 @@ def degradation(img, image_list, path_lm):
             img = add_resize(img, s)
         elif i == 2 and random.random() < p/2:
             l1 = 2
-            l2 = 100
+            l2 = 50
             img = add_Gaussian_noise(img, noise_level1=l1 * s, noise_level2=l2 * s)
         elif i == 3 and random.random() < p/2:
-            l1 = 80
-            l2 = 100
+            l1 = 25
+            l2 = 50
             img = add_Gaussian_noise(img, noise_level1=l1 * s, noise_level2=l2 * s)
         elif i == 4 and random.random() < p:
             if random.random() < 0.5:
@@ -404,38 +405,38 @@ if __name__ == '__main__':
 
 # Crée un dossier pour les images (ne plante pas si déjà là)
     save_dir = "debug_degraded"
-    os.makedirs(save_dir, exist_ok=True)
+    # os.makedirs(save_dir, exist_ok=True)
 
-    device = torch.device('cuda')
-    val_dataset = SBI_Dataset(phase = 'val', image_size = 380, poisson = True, random_mask = True)
-    val_loader=torch.utils.data.DataLoader(val_dataset,
-                        batch_size=1,
-                        shuffle=True,
-                        collate_fn=val_dataset.collate_fn,
-                        num_workers=4,
-                        pin_memory=True,
-                        worker_init_fn=val_dataset.worker_init_fn
-                        )
-    for step, data in enumerate(tqdm(val_loader)):
-        img = data['img'].to(device, non_blocking=True).float()
-        degraded_list = []
-        for i in range(img.size(0)):
-            single_img_tensor = img[i]             # (C, H, W)
+    # device = torch.device('cuda')
+    # val_dataset = SBI_Dataset(phase = 'val', image_size = 380, poisson = True, random_mask = True)
+    # val_loader=torch.utils.data.DataLoader(val_dataset,
+    #                     batch_size=1,
+    #                     shuffle=True,
+    #                     collate_fn=val_dataset.collate_fn,
+    #                     num_workers=4,
+    #                     pin_memory=True,
+    #                     worker_init_fn=val_dataset.worker_init_fn
+    #                     )
+    # for step, data in enumerate(tqdm(val_loader)):
+    #     img = data['img'].to(device, non_blocking=True).float()
+    #     degraded_list = []
+    #     for i in range(img.size(0)):
+    #         single_img_tensor = img[i]             # (C, H, W)
     
-            single_img_np = single_img_tensor.cpu().numpy()  # (C, H, W)
-            single_img_np = np.transpose(single_img_np, (1, 2, 0))  # (H, W, C) si nécessaire
-            degraded_img_np = degradation(single_img_np, val_dataset.image_list, val_dataset.path_lm)
+    #         single_img_np = single_img_tensor.cpu().numpy()  # (C, H, W)
+    #         single_img_np = np.transpose(single_img_np, (1, 2, 0))  # (H, W, C) si nécessaire
+    #         degraded_img_np = degradation(single_img_np, val_dataset.image_list, val_dataset.path_lm)
     
-            # Reconvertir en tensor (C, H, W)
-            degraded_img_np = np.transpose(degraded_img_np, (2, 0, 1))  # (C, H, W)
-            degraded_img_tensor = torch.from_numpy(degraded_img_np).to(device).float()
+    #         # Reconvertir en tensor (C, H, W)
+    #         degraded_img_np = np.transpose(degraded_img_np, (2, 0, 1))  # (C, H, W)
+    #         degraded_img_tensor = torch.from_numpy(degraded_img_np).to(device).float()
 
-            degraded_list.append(degraded_img_tensor)
-            save_path = os.path.join(save_dir, f"step{step}_img{i}.png")
-            save_image(degraded_img_tensor.clamp(0, 1), save_path)
+    #         degraded_list.append(degraded_img_tensor)
+    #         save_path = os.path.join(save_dir, f"step{step}_img{i}.png")
+    #         save_image(degraded_img_tensor.clamp(0, 1), save_path)
 
-        # Empiler pour obtenir un batch final
-        degraded_img_batch = torch.stack(degraded_list, dim=0) 
+    #     # Empiler pour obtenir un batch final
+    #     degraded_img_batch = torch.stack(degraded_list, dim=0) 
 #     img = util.imread_uint('utils/test.png', 3)
 #     img = util.uint2single(img)
 #     sf = 4
