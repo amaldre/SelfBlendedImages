@@ -318,12 +318,12 @@ def get_final_transforms():
 
 
 class SBI_Custom_Dataset(SBI_Dataset):
-	def init_datasets(self, phase, datasets, n_frames):
+	def init_datasets(self, phase, datasets, n_frames, crop_mode):
 		self.image_list = []
 		assert phase in ['train','val','test']
 		if ('FF' in datasets):
 			image_list_ff, _ = init_ff(phase,'frame',n_frames=n_frames)
-			image_list=[image_list[i] for i in range(len(image_list)) if os.path.isfile(image_list[i].replace('/frames/', self.path_lm).replace('.png','.npy')) and os.path.isfile(image_list[i].replace('/frames/','/yunet/').replace('.png','.npy'))]
+			image_list=[image_list[i] for i in range(len(image_list)) if os.path.isfile(image_list[i].replace('/frames/', self.path_lm).replace('.png','.npy')) and os.path.isfile(image_list[i].replace('/frames/',f'/{crop_mode}/').replace('.png','.npy'))]
 			print(f'SBI_FF({phase}): {len(image_list_ff)}')
 			self.image_list += image_list_ff
 		elif ('MSU-MFSD' in datasets):

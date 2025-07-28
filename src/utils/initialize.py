@@ -9,7 +9,7 @@ import os
 import pandas as pd
 import re
 
-def init_ff(phase,level='frame',n_frames=8):
+def init_ff(phase, level='frame',n_frames=8):
 	dataset_path='/mnt/ssd_nvme2/datasets/FaceForensics++/sbi/frames/'
 	
 

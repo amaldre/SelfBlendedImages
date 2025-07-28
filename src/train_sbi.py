@@ -45,12 +45,13 @@ import matplotlib.pyplot as plt
 #     degraded_img_batch = torch.stack(degraded_list, dim=0) 
 #     return degraded_img_batch
 
-def test(model_path, dataset, plot_bool):
+def test(model_path, dataset, plot_bool, model):
     args = argparse.Namespace(
     weight_name=model_path,
     dataset=dataset,
     plot = plot_bool, 
-    confmat = False
+    confmat = False,
+    model = model
     )
     return infer(args)
 
@@ -69,6 +70,7 @@ def main(args):
     LR_SCHEDULER = cfg['lr_scheduler']
     ADAM = cfg['adam'] == 1
     BACKBONE = cfg['backbone']
+    CROP_MODE = cfg["crop_mode"]
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -89,9 +91,9 @@ def main(args):
     # val_dataset = SBI_Custom_Dataset('val', ['FF', 'MSU-MFSD', 'REPLAY-ATTACK', 'MOBIO', 'SIM-MV2'], 
     #                                  image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
     train_dataset = SBI_Custom_Dataset('train', cfg["test_datasets"], 
-                                       image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+                                       image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE)
     val_dataset = SBI_Custom_Dataset('val', cfg["val_datasets"], 
-                                     image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+                                     image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE)
     train_loader=torch.utils.data.DataLoader(train_dataset,
                         batch_size=batch_size//2,
                         shuffle=True,
@@ -296,7 +298,7 @@ def main(args):
             if (not best_model in val_set):
                 val_set.add(best_model)
                 for dataset in cfg['test_datasets']:
-                    auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, dataset, False)
+                    auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, dataset, False, CROP_MODE)
                     fpr, tpr, _ = roc_curve(target_list, output_list)
 
                     # Create the ROC figure
