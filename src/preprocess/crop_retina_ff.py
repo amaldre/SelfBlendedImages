@@ -83,7 +83,7 @@ if __name__=='__main__':
 	parser.add_argument('-n',dest='num_frames',type=int,default=32)
 	args=parser.parse_args()
 	if args.dataset=='Original':
-		dataset_path='/datasets/FaceForensics++/original_download/original_sequences/youtube/'
+		dataset_path='/mnt/ssd_nvme2/datasets/FaceForensics++/original_download/original_sequences/youtube/'
 	elif args.dataset=='DeepFakeDetection_original':
 		dataset_path='data/FaceForensics++/original_sequences/actors/{}/'.format(args.comp)
 	elif args.dataset in ['DeepFakeDetection','FaceShifter','Face2Face','Deepfakes','FaceSwap','NeuralTextures']:
@@ -100,7 +100,7 @@ if __name__=='__main__':
 	model = get_model("resnet50_2020-07-20", max_size=2048,device=device)
 	model.eval()
 
-	movies_path = r'/datasets/FaceForensics++/sbi'
+	movies_path = r'/mnt/ssd_nvme2/datasets/FaceForensics++/sbi'
 	movies_list = os.listdir(os.path.join(movies_path, 'frames'))
 	n_sample=len(movies_list)
 	print("{} : videos are exist in {}".format(len(movies_list),args.dataset))

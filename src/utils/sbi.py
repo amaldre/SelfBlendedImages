@@ -44,6 +44,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from degradations import degradation
 print(f"exist_bi: {exist_bi}")
 
+
 class SBI_Dataset(Dataset):
 	def __init__(self,phase='train',image_size=224,n_frames=8, degradations = False, poisson = False, random_mask = False):
 		
@@ -314,6 +315,128 @@ class SBI_Dataset(Dataset):
 
 def get_final_transforms():
 	return transforms.Lambda(lambda img: img * 2.0 - 1.0)
+
+
+class SBI_Custom_Dataset(SBI_Dataset):
+	def init_datasets(self, phase, datasets, n_frames):
+		self.image_list = []
+		assert phase in ['train','val','test']
+		if ('FF' in datasets):
+			image_list_ff, _ = init_ff(phase,'frame',n_frames=n_frames)
+			image_list=[image_list[i] for i in range(len(image_list)) if os.path.isfile(image_list[i].replace('/frames/', self.path_lm).replace('.png','.npy')) and os.path.isfile(image_list[i].replace('/frames/','/yunet/').replace('.png','.npy'))]
+			print(f'SBI_FF({phase}): {len(image_list_ff)}')
+			self.image_list += image_list_ff
+		elif ('MSU-MFSD' in datasets):
+			image_list_msu_mfsd, _ = init_MSU_MFD(phase, n_frames)
+			print(f'SBI_MSU_MFSD({phase}): {len(image_list_msu_mfsd)}')
+			self.image_list += image_list_msu_mfsd
+		elif ('REPLAY-ATTACK' in datasets):
+			image_list_replay_attack, _ = init_replay_attack(phase, n_frames)
+			print(f'SBI_REPLAY_ATTACK({phase}): {len(image_list_replay_attack)}')
+			self.image_list += image_list_replay_attack
+		elif ('MOBIO' in datasets):
+			image_list_mobio, _ = init_mobio(phase, n_frames)
+			print(f'SBI_MOBIO({phase}): {len(image_list_mobio)}')
+			self.image_list += image_list_mobio
+		elif ('SIM-MV2' in datasets):
+			image_list_sim_mv2, _ = init_sim_mw2(phase, n_frames)
+			print(f'SBI_SIM_MV2({phase}): {len(image_list_sim_mv2)}')
+			self.image_list += image_list_sim_mv2
+
+	def __init__(self, phase='train', datasets = ['FF'], image_size=224,n_frames=8, degradations = False, poisson = False, random_mask = False):
+		path_lm='/landmarks/' 
+		self.path_lm=path_lm
+		self.init_datasets(phase, datasets, n_frames)
+		self.image_size=(image_size,image_size)
+		self.phase=phase
+		self.n_frames=n_frames
+		self.transforms=self.get_transforms()
+		self.source_transforms = self.get_source_transforms()
+		self.degradations = degradations
+		self.poisson = poisson
+		self.random_mask = random_mask
+		self.final_transforms = get_final_transforms()
+	def __getitem__(self,idx):
+		flag=True
+		while flag:
+			try:
+				#Initialization
+				filename=self.image_list[idx]
+				img=np.array(Image.open(filename))
+				#Get dlib landmarks
+				landmark=np.load(filename.replace('.png','.npy').replace('/frames/',self.path_lm))[0]
+				#Get dlib bounding landmarks
+				bbox_lm=np.array([landmark[:,0].min(),landmark[:,1].min(),landmark[:,0].max(),landmark[:,1].max()])
+				#Get to two first bounding boxes detected by retina
+				retina_path = filename.replace('.png','.npy').replace('/frames/','/retina/')
+				yunet_path = filename.replace('.png','.npy').replace('/frames/','/yunet/')
+				if os.path.exists(retina_path):
+					bboxes=np.load(filename.replace('.png','.npy').replace('/frames/','/retina/'))[:2]
+					#Finding face with highest iou
+					iou_max=-1
+					for i in range(len(bboxes)):
+						iou=IoUfrom2bboxes(bbox_lm,bboxes[i].flatten())
+						if iou_max<iou:
+							bbox=bboxes[i]
+							iou_max=iou
+				elif os.path.exists(yunet_path):
+					bbox = np.load(yunet_path)
+				else: 
+					#Shouldn't happen, as yunet boxes are already checked for during dataset initialization
+					print(f"Can't find bounding boxes for {filename}")
+					continue
+					
+				#Reorder landmark
+				landmark=self.reorder_landmark(landmark)
+
+				#If training, random chance of flipping image
+				if self.phase=='train':
+					if np.random.rand()<0.5:
+						#Function is same as LAA-Net
+						img,_,landmark,bbox=self.hflip(img,None,landmark,bbox)
+
+				#Get img landmarks and bbox for self-blending		
+				img,landmark,bbox,__=crop_face(img,landmark,bbox,margin=True,crop_by_bbox=False)
+
+				#Get self blending pristine and fake 
+				img_r,img_f,mask_f=self.self_blending(img.copy(),landmark.copy(), self.poisson, self.random_mask)
+				
+				#Augment during training
+				if self.phase=='train' and not self.degradations:
+					transformed=self.transforms(image=img_f.astype('uint8'),image1=img_r.astype('uint8'))
+					img_f=transformed['image']
+					img_r=transformed['image1']
+					
+				
+				#Crop on fake image between 5 and 20% around face
+				img_f,_,__,___,y0_new,y1_new,x0_new,x1_new=crop_face(img_f,landmark,bbox,margin=False,crop_by_bbox=True,abs_coord=True,phase=self.phase)
+				
+				#Apply same thing for pristine image
+				img_r=img_r[y0_new:y1_new,x0_new:x1_new]
+				
+				#Resize to config size
+				img_f=cv2.resize(img_f,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
+				img_r=cv2.resize(img_r,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
+
+				if (self.degradations):
+					img_f = degradation(img_f, self.image_list, self.path_lm)
+					img_r = degradation(img_r, self.image_list, self.path_lm)
+
+				img_f = self.final_transforms(img_f)
+				img_r = self.final_transforms(img_r)
+
+				#Transpose
+				img_f=img_f.transpose((2,0,1))
+				img_r=img_r.transpose((2,0,1))
+
+				flag=False
+			except Exception as e:
+				print(e)
+				print(filename)
+				idx=torch.randint(low=0,high=len(self),size=(1,)).item()
+		
+		return img_f,img_r
+
 
 if __name__=='__main__':
 	import blend as B

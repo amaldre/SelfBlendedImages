@@ -7,7 +7,7 @@ import os
 from PIL import Image
 import sys
 import random
-from utils.sbi import SBI_Dataset
+from utils.sbi import SBI_Dataset, SBI_Custom_Dataset
 from utils.scheduler import LinearDecayLR, LinearDecayLR_LaaNet, FlatCosineAnnealingLR
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
@@ -82,9 +82,16 @@ def main(args):
 
     image_size=cfg['image_size']
     batch_size=cfg['batch_size']
-    train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
-    val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
-   
+    # train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    # val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    # train_dataset = SBI_Custom_Dataset('train', ['FF', 'MSU-MFSD', 'REPLAY-ATTACK', 'MOBIO', 'SIM-MV2'], 
+    #                                    image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    # val_dataset = SBI_Custom_Dataset('val', ['FF', 'MSU-MFSD', 'REPLAY-ATTACK', 'MOBIO', 'SIM-MV2'], 
+    #                                  image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    train_dataset = SBI_Custom_Dataset('train', cfg["test_datasets"], 
+                                       image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    val_dataset = SBI_Custom_Dataset('val', cfg["val_datasets"], 
+                                     image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
     train_loader=torch.utils.data.DataLoader(train_dataset,
                         batch_size=batch_size//2,
                         shuffle=True,

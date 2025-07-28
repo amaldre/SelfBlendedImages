@@ -1,15 +1,12 @@
 from glob import glob
 import os
-import sys
 import json
-import numpy as np
-from PIL import Image
 from glob import glob 
 import os
 import pandas as pd
 
 T7 = '/media/alicia/T7/ShareID/TestDataSets'
-DATASHAREID = "/media/alicia/dataShareID"
+DATASHAREID = "/home/alicia/dataShareID"
 CROP_DIR = 'crop_data'
 VID_EXTENSIONS = {'.mp4', '.mov', '.avi'}
 
@@ -55,12 +52,13 @@ def init_dataset(dataset):
 
 
 def init_ff(dataset='all',phase='test'):
+	ROOT = '/mnt/ssd_nvme2/datasets/FaceForensics++'
 	video_root = "FaceForensics++"
 	assert dataset in ['all','Deepfakes','Face2Face','FaceSwap','NeuralTextures']
-	original_path='/datasets/FaceForensics++/original_download/original_sequences/youtube/'
+	original_path= os.path.join(ROOT, 'original_download/original_sequences/youtube/')
 	folder_list = sorted(glob(original_path+'*'))
 
-	list_dict = json.load(open(f'/datasets/FaceForensics++/original_download/splits/{phase}.json','r'))
+	list_dict = json.load(open(os.path.join(ROOT, f'original_download/splits/{phase}.json'),'r'))
 	filelist=[]
 	for i in list_dict:
 		filelist+=i
@@ -75,7 +73,7 @@ def init_ff(dataset='all',phase='test'):
 
 	folder_list=[]
 	for fake in fakes:
-		fake_path=f'/datasets/FaceForensics++/original_download/manipulated_sequences/{fake}/'
+		fake_path=os.path.join(ROOT, f'original_download/manipulated_sequences/{fake}/')
 		folder_list_all=sorted(glob(fake_path+'*'))
 		folder_list+=[i for i in folder_list_all if os.path.basename(i)[:3] in filelist]
 	label_list+=[1]*len(folder_list)
@@ -207,7 +205,7 @@ def init_custom_folder(video_root, label):
 	return folder_list, label_list, video_root
 
 def init_alexandre():
-	video_root = 'ShareIdFake/output'
+	video_root = 'alexandre_24-07_4/perfect_match_box_simswap_256_gfpgan_1.4_75_0.7_noise_flou'
 	return init_custom_folder(video_root, 1)
 
 def init_alexandre_pristine():

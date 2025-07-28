@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import random
 import argparse
-from datetime import datetime
 from tqdm import tqdm
 import warnings
 import pickle
@@ -36,8 +35,14 @@ def main(args):
     final_transforms = get_final_transforms()
     _, target_list, video_root = init_dataset(args.dataset)
 
-    data_path = os.path.join(CROP_DIR, video_root, 'video_data.pkl')
-    assert os.path.exists(data_path)
+
+    data_path_retina = os.path.join(CROP_DIR, video_root, 'video_data.pkl')
+    data_path_yunet = os.path.join(CROP_DIR, video_root, 'video_data_yunet.pkl')
+    assert os.path.exists(data_path_retina)
+    video_data_path = data_path_retina
+    if (os.path.exists(data_path_yunet)):
+        print("Using yunet crop for inference")
+        video_data_path = data_path_yunet
     print("------Inference mode------")
     print(f"Testing model {os.path.basename(args.weight_name)}")
 
@@ -54,7 +59,7 @@ def main(args):
     model.eval()
 
     output_list = []
-    with open(data_path, 'rb') as f:
+    with open(video_data_path, 'rb') as f:
         video_data = pickle.load(f)
 
     count = 0
