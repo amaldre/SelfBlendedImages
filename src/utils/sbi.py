@@ -318,34 +318,35 @@ def get_final_transforms():
 
 
 class SBI_Custom_Dataset(SBI_Dataset):
-	def init_datasets(self, phase, datasets, n_frames, crop_mode):
+	def init_datasets(self, phase, datasets, n_frames):
 		self.image_list = []
 		assert phase in ['train','val','test']
 		if ('FF' in datasets):
 			image_list_ff, _ = init_ff(phase,'frame',n_frames=n_frames)
-			image_list=[image_list[i] for i in range(len(image_list)) if os.path.isfile(image_list[i].replace('/frames/', self.path_lm).replace('.png','.npy')) and os.path.isfile(image_list[i].replace('/frames/',f'/{crop_mode}/').replace('.png','.npy'))]
+			image_list_ff=[image_list_ff[i] for i in range(len(image_list_ff)) if os.path.isfile(image_list_ff[i].replace('/frames/', self.path_lm).replace('.png','.npy')) and os.path.isfile(image_list_ff[i].replace('/frames/',f'/{self.crop_mode}/').replace('.png','.npy'))]
 			print(f'SBI_FF({phase}): {len(image_list_ff)}')
 			self.image_list += image_list_ff
-		elif ('MSU-MFSD' in datasets):
+		if ('MSU-MFSD' in datasets):
 			image_list_msu_mfsd, _ = init_MSU_MFD(phase, n_frames)
 			print(f'SBI_MSU_MFSD({phase}): {len(image_list_msu_mfsd)}')
 			self.image_list += image_list_msu_mfsd
-		elif ('REPLAY-ATTACK' in datasets):
+		if ('REPLAY-ATTACK' in datasets):
 			image_list_replay_attack, _ = init_replay_attack(phase, n_frames)
 			print(f'SBI_REPLAY_ATTACK({phase}): {len(image_list_replay_attack)}')
 			self.image_list += image_list_replay_attack
-		elif ('MOBIO' in datasets):
+		if ('MOBIO' in datasets):
 			image_list_mobio, _ = init_mobio(phase, n_frames)
 			print(f'SBI_MOBIO({phase}): {len(image_list_mobio)}')
 			self.image_list += image_list_mobio
-		elif ('SIM-MV2' in datasets):
+		if ('SIM-MV2' in datasets):
 			image_list_sim_mv2, _ = init_sim_mw2(phase, n_frames)
 			print(f'SBI_SIM_MV2({phase}): {len(image_list_sim_mv2)}')
 			self.image_list += image_list_sim_mv2
 
-	def __init__(self, phase='train', datasets = ['FF'], image_size=224,n_frames=8, degradations = False, poisson = False, random_mask = False):
+	def __init__(self, phase='train', datasets = ['FF'], image_size=224,n_frames=8, degradations = False, poisson = False, random_mask = False, crop_mode = 'retina'):
 		path_lm='/landmarks/' 
 		self.path_lm=path_lm
+		self.crop_mode = crop_mode
 		self.init_datasets(phase, datasets, n_frames)
 		self.image_size=(image_size,image_size)
 		self.phase=phase
@@ -370,7 +371,7 @@ class SBI_Custom_Dataset(SBI_Dataset):
 				#Get to two first bounding boxes detected by retina
 				retina_path = filename.replace('.png','.npy').replace('/frames/','/retina/')
 				yunet_path = filename.replace('.png','.npy').replace('/frames/','/yunet/')
-				if os.path.exists(retina_path):
+				if os.path.exists(retina_path) and self.crop_mode == 'retina':
 					bboxes=np.load(filename.replace('.png','.npy').replace('/frames/','/retina/'))[:2]
 					#Finding face with highest iou
 					iou_max=-1
@@ -379,7 +380,7 @@ class SBI_Custom_Dataset(SBI_Dataset):
 						if iou_max<iou:
 							bbox=bboxes[i]
 							iou_max=iou
-				elif os.path.exists(yunet_path):
+				elif os.path.exists(yunet_path) and self.crop_mode == 'yunet':
 					bbox = np.load(yunet_path)
 				else: 
 					#Shouldn't happen, as yunet boxes are already checked for during dataset initialization
