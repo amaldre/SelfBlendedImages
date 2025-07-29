@@ -38,11 +38,12 @@ def main(args):
 
     data_path_retina = os.path.join(CROP_DIR, video_root, 'video_data.pkl')
     data_path_yunet = os.path.join(CROP_DIR, video_root, 'video_data_yunet.pkl')
-    assert os.path.exists(data_path_retina)
-    video_data_path = data_path_retina
-    if (os.path.exists(data_path_yunet)):
+    if (os.path.exists(data_path_yunet) and args.crop_mode == 'yunet'):
         print("Using yunet crop for inference")
         video_data_path = data_path_yunet
+    elif (os.path.exists(data_path_retina)):
+        print("Using retina crop for inference" and args.crop_mode == 'retina')
+        video_data_path = data_path_retina
     print("------Inference mode------")
     print(f"Testing model {os.path.basename(args.weight_name)}")
 
@@ -188,7 +189,7 @@ if __name__ == '__main__':
     parser.add_argument('-plot', dest='plot', action='store_true', default=False)
     parser.add_argument('-print', dest='print', action='store_true', default=False)
     parser.add_argument('-confmat', dest='confmat', action='store_true', default=False, help="Enable confusion matrix print and plot")
-    #parser.add_argument('-backbone', dest='backbone', default='efficientnet-b4')
+    parser.add_argument('-crop_mode', dest='crop_mode')
     args = parser.parse_args()
 
     main(args)

@@ -45,13 +45,13 @@ import matplotlib.pyplot as plt
 #     degraded_img_batch = torch.stack(degraded_list, dim=0) 
 #     return degraded_img_batch
 
-def test(model_path, dataset, plot_bool, model):
+def test(model_path, dataset, plot_bool, crop_mode):
     args = argparse.Namespace(
     weight_name=model_path,
     dataset=dataset,
     plot = plot_bool, 
     confmat = False,
-    model = model
+    crop_mode = crop_mode
     )
     return infer(args)
 
@@ -90,7 +90,7 @@ def main(args):
     #                                    image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
     # val_dataset = SBI_Custom_Dataset('val', ['FF', 'MSU-MFSD', 'REPLAY-ATTACK', 'MOBIO', 'SIM-MV2'], 
     #                                  image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
-    train_dataset = SBI_Custom_Dataset('train', cfg["test_datasets"], 
+    train_dataset = SBI_Custom_Dataset('train', cfg["train_datasets"], 
                                        image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE)
     val_dataset = SBI_Custom_Dataset('val', cfg["val_datasets"], 
                                      image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE)
