@@ -40,9 +40,16 @@ def init_ff(phase, level='frame',n_frames=8):
 
 
 def get_frames (n_frames, images_temp):
-	if n_frames<len(images_temp):
-		images_temp =[images_temp[round(i)] for i in np.linspace(0,len(images_temp)-1, n_frames)]
-	return images_temp
+	image_candidates = []
+	#retina = [image.replace(".png", ".npy").replace("frames", 'retina') for image in images_temp]
+	for image in images_temp:
+		yunet_path = image.replace(".png", ".npy").replace("frames", "yunet")
+		landmarks_path = image.replace(".png", ".npy").replace("frames", "landmarks")
+		if os.path.exists(yunet_path) and os.path.exists(landmarks_path):
+			image_candidates.append(image)
+	if n_frames<len(image_candidates):
+		image_candidates =[image_candidates[round(i)] for i in np.linspace(0,len(image_candidates)-1, n_frames)]
+	return image_candidates
 
 def init_MSU_MFD(phase, n_frames):
 	assert phase in ["train", "val"]
@@ -165,6 +172,7 @@ def init_sim_mw2(phase, n_frames):
 	image_list = []
 	label_list = []
 	all_video_names = os.listdir(dataset_frames_path)
+	#/home/alicia/dataShareID/temp_datasets/SiW-Mv2/frames/Live_776/149.png
 	for video in all_video_names:
 		is_in_reference = False
 		match = re.search(r'Live_(\d{1,3})', video)
