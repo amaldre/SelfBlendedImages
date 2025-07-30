@@ -1,3 +1,5 @@
+import cv2
+cv2.setNumThreads(0)
 import os
 import torch
 import torch.nn as nn
