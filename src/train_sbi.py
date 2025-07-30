@@ -96,6 +96,7 @@ def main(args):
     #                                  image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
     
     if WEIGHTED_SAMPLER:
+        print("Using weighted sampler")
         dataset_list = []
         source_counts = {}
         for dataset_name in cfg["train_datasets"]:
