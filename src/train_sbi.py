@@ -4,6 +4,7 @@ import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, WeightedRandomSampler, ConcatDataset
 import numpy as np
 import os
 from PIL import Image
@@ -73,6 +74,7 @@ def main(args):
     ADAM = cfg['adam'] == 1
     BACKBONE = cfg['backbone']
     CROP_MODE = cfg["crop_mode"]
+    WEIGHTED_SAMPLER = cfg["weighted_sampler"] == 1
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -92,11 +94,35 @@ def main(args):
     #                                    image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
     # val_dataset = SBI_Custom_Dataset('val', ['FF', 'MSU-MFSD', 'REPLAY-ATTACK', 'MOBIO', 'SIM-MV2'], 
     #                                  image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
-    train_dataset = SBI_Custom_Dataset('train', cfg["train_datasets"], 
+    
+    if WEIGHTED_SAMPLER:
+        dataset_list = []
+        source_counts = {}
+        for dataset_name in cfg["train_datasets"]:
+            dataset = SBI_Custom_Dataset('train', [dataset_name], image_size=image_size, degradations=DEGRADATIONS, poisson=POISSON, random_mask=RANDOM_MASK, crop_mode=CROP_MODE)
+            dataset_list.append(dataset)
+            source_counts[dataset_name] = len(dataset)
+        combined_dataset = ConcatDataset(dataset_list)
+        source_ids = []
+        for i in range(len(cfg["train_datasets"])):
+            source_ids.extend([i] * source_counts[cfg["train_datasets"][i]])
+        source_weights = [1.0 / count for count in source_counts.values()]
+        sample_weights = [source_weights[id] for id in source_ids]
+
+        sampler = WeightedRandomSampler(weights=torch.DoubleTensor(sample_weights), num_samples=len(sample_weights))
+
+        train_loader = DataLoader(combined_dataset, batch_size=batch_size//2, 
+                                  collate_fn = dataset_list[0].collate_fn, 
+                                  num_workers = 4,
+                                  pin_memory = True,
+                                  drop_last = True,
+                                  worker_init_fn = dataset_list[0].worker_init_fn,
+                                  sampler=sampler)
+
+    else:
+        train_dataset = SBI_Custom_Dataset('train', cfg["train_datasets"], 
                                        image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE)
-    val_dataset = SBI_Custom_Dataset('val', cfg["val_datasets"], 
-                                     image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE)
-    train_loader=torch.utils.data.DataLoader(train_dataset,
+        train_loader = DataLoader(train_dataset,
                         batch_size=batch_size//2,
                         shuffle=True,
                         collate_fn=train_dataset.collate_fn,
@@ -105,7 +131,9 @@ def main(args):
                         drop_last=True,
                         worker_init_fn=train_dataset.worker_init_fn
                         )
-    val_loader=torch.utils.data.DataLoader(val_dataset,
+    val_dataset = SBI_Custom_Dataset('val', cfg["val_datasets"], 
+                                     image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE)
+    val_loader = DataLoader(val_dataset,
                         batch_size=batch_size,
                         shuffle=False,
                         collate_fn=val_dataset.collate_fn,
