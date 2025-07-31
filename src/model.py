@@ -63,7 +63,6 @@ class Detector(nn.Module):
     
     
     def training_step(self,x,target):
-        print(self.adam)
         if self.adam:
             pred_cls = self(x)
             loss = self.cel(pred_cls, target)
