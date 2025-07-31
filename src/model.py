@@ -13,14 +13,15 @@ class Detector(nn.Module):
         super(Detector, self).__init__()
         self.net=EfficientNet.from_pretrained(backbone, advprop=True,num_classes=2)
         self.backbone = backbone
+        self.adam = adam
         if phase == 'train':
             self.cel=nn.CrossEntropyLoss()
             if adam:
-                print("Using Adam optimizer")
-                self.optimizer = SAM(self.parameters(), torch.optim.AdamW, lr=lr, #weight_decay=1e-4
-                                     )
+                print("Using AdamW optimizer")
+                #self.optimizer = SAM(self.parameters(), torch.optim.AdamW, lr=lr, #weight_decay=1e-4)
+                self.optimizer = torch.optim.AdamW(self.parameters(), lr)
             else:
-                print("Using SGD optimizer")
+                print("Using SAM + SGD optimizer")
                 self.optimizer=SAM(self.parameters(),torch.optim.SGD,lr=lr, momentum=0.9)
         
         
@@ -62,18 +63,28 @@ class Detector(nn.Module):
     
     
     def training_step(self,x,target):
-        for i in range(2):
-            pred_cls=self(x)
-            if i==0:
-                pred_first=pred_cls
-            loss_cls=self.cel(pred_cls,target)
-            loss=loss_cls
-            self.optimizer.zero_grad()
-            loss.backward()
-            if i==0:
-                self.optimizer.first_step(zero_grad=True)
-            else:
-                self.optimizer.second_step(zero_grad=True)
+        print(self.adam)
+        if self.adam:
+            pred_cls = self(x)
+            loss = self.cel(pred_cls, target)
+
+            self.optimizer.zero_grad()  # 1. Clear old gradients
+            loss.backward()             # 2. Backpropagate (compute gradients)
+            self.optimizer.step() 
+            return pred_cls
+        else:
+            for i in range(2):
+                pred_cls=self(x)
+                if i==0:
+                    pred_first=pred_cls
+                loss_cls=self.cel(pred_cls,target)
+                loss=loss_cls
+                self.optimizer.zero_grad()
+                loss.backward()
+                if i==0:
+                    self.optimizer.first_step(zero_grad=True)
+                else:
+                    self.optimizer.second_step(zero_grad=True)
         
-        return pred_first
+                return pred_first
     
