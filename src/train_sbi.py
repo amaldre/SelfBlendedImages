@@ -10,7 +10,7 @@ import os
 from PIL import Image
 import sys
 import random
-from utils.sbi import SBI_Dataset, SBI_Custom_Dataset
+from utils.sbi import SBI_Dataset, SBI_Custom_Dataset, SourceConcat
 from utils.scheduler import LinearDecayLR, LinearDecayLR_LaaNet, FlatCosineAnnealingLR
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
@@ -207,6 +207,9 @@ def main(args):
         if needs_unfreezing and epoch >= FREEZE:
             model.unfreeze()
             needs_unfreezing = False
+            print("Changing post freeze learning rate")
+            for param_group in model.optimizer.param_groups:
+                param_group['lr'] = 0.0001
         np.random.seed(seed + epoch)
         random.seed(seed + epoch) 
         train_loss = 0.
