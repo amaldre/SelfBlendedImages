@@ -166,7 +166,7 @@ def init_sim_mw2(phase, n_frames):
 	# mov = [range(1, 104), range(610, 661)]
 	# avi = [range(105, 505)]
 	# mp4 = [range(661, 892)]
-	train = [i for r in [range(1, 84), range(105, 425), range(610, 651), range(661, 846)] for i in r]
+	train = set([i for r in [range(1, 84), range(105, 425), range(610, 651), range(661, 846)] for i in r])
 	dataset_frames_path = '/home/alicia/dataShareID/temp_datasets/SiW-Mv2/frames'
 	folder_list = []
 	image_list = []
@@ -183,13 +183,9 @@ def init_sim_mw2(phase, n_frames):
 		if phase == "train": 
 			is_in_reference = number in train
 		else:
-			is_in_reference = not number in train
+			is_in_reference = number not in train
 		video_full_path = os.path.join(dataset_frames_path, video)
-		#Check if dlib found landmark
-		landmarks_exist = os.path.exists(video_full_path.replace('frames', 'landmarks'))
-		#Check if yunet found face
-		yunet_exist = os.path.exists(video_full_path.replace('frames', 'yunet'))
-		if is_in_reference and landmarks_exist and yunet_exist:
+		if is_in_reference:
 			folder_list.append(video_full_path)
 	#For each folder, get all image paths
 	for i in range(len(folder_list)):
