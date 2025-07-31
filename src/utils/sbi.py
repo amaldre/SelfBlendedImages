@@ -6,7 +6,7 @@
 
 import torch
 from torchvision import datasets,transforms,utils
-from torch.utils.data import Dataset,IterableDataset
+from torch.utils.data import Dataset,IterableDataset, ConcatDataset
 from glob import glob
 import os
 import numpy as np
@@ -437,7 +437,40 @@ class SBI_Custom_Dataset(SBI_Dataset):
 				idx=torch.randint(low=0,high=len(self),size=(1,)).item()
 		
 		return img_f,img_r
+	
+class SourceConcat(ConcatDataset):
+	def __init__(self, datasets):
+		super().__init__(datasets)
+		self.datasets = datasets
+		self.concat = ConcatDataset(datasets)
+		self.source_ids = self._build_source_index()
 
+	def _build_source_index(self):
+		source_ids = []
+		for i, dataset in enumerate(self.datasets):
+			source_ids.extend([i] * len(dataset))
+		return source_ids
+
+	def __len__(self):
+		return len(self.concat)
+
+	def __getitem__(self, idx):
+		sample = super().__getitem__(idx)
+		source_id = self.source_ids[idx]
+		if isinstance(sample, tuple):
+			sample = {'img_f': sample[0], 'img_r': sample[1]}
+		sample["source_id"] = source_id
+		return sample
+	
+	def custom_collate_fn(self, batch):
+		img_f = [torch.tensor(sample['img_f']) for sample in batch]
+		img_r = [torch.tensor(sample['img_r']) for sample in batch]
+		source_ids = [sample['source_id'] for sample in batch]
+		data = {}
+		data['img'] = torch.cat([torch.stack(img_r).float(), torch.stack(img_f).float()], 0)
+		data['label'] = torch.tensor([0]*len(img_r) + [1]*len(img_f), dtype=torch.long)
+		data['source_id'] = torch.tensor(source_ids * 2, dtype=torch.long)
+		return data
 
 if __name__=='__main__':
 	import blend as B
@@ -472,3 +505,5 @@ else:
 	from .funcs import IoUfrom2bboxes,crop_face,RandomDownScale
 	if exist_bi:
 		from utils.library.bi_online_generation import random_get_hull
+
+
