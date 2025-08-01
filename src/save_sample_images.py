@@ -68,41 +68,45 @@ def main():
 
     with torch.no_grad():
         for data in tqdm(train_loader):
-            img_r = data["img_r"] 
-            img_f = data["img_f"]
+            images = data["img"]            # [B, C, H, W]
+            labels = data["label"]
             source_ids = data["source_id"]
 
-            if num_saved >= max_to_save:
-                break
+            b = images.size(0)
+            for i in range(0, b, 2):
+                if num_saved >= max_to_save:
+                    break
 
-            label1 = 0
-            label2 = 1
-            source1 = DATASETS[source_ids[i].item()]
-            source2 = DATASETS[source_ids[i+1].item()]
+                img1 = images[i]
+                img2 = images[i+1]
+                label1 = labels[i].item()
+                label2 = labels[i+1].item()
+                source1 = DATASETS[source_ids[i].item()]
+                source2 = DATASETS[source_ids[i+1].item()]
 
                 # Tensor -> NumPy image
-            img1_np = (img_f.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
-            img2_np = (img_r.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+                img1_np = (img1.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+                img2_np = (img2.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
 
                 # Resize to same dimensions
-            height = max(img1_np.shape[0], img2_np.shape[0])
-            width = max(img1_np.shape[1], img2_np.shape[1])
-            img1_np = cv2.resize(img1_np, (width, height))
-            img2_np = cv2.resize(img2_np, (width, height))
+                height = max(img1_np.shape[0], img2_np.shape[0])
+                width = max(img1_np.shape[1], img2_np.shape[1])
+                img1_np = cv2.resize(img1_np, (width, height))
+                img2_np = cv2.resize(img2_np, (width, height))
 
                 # Concatenate
-            pair_img = np.concatenate([img1_np, img2_np], axis=1)
+                pair_img = np.concatenate([img1_np, img2_np], axis=1)
 
                 # Add text
-            cv2.putText(pair_img, f"{source1} ({label1})", (10, 20), font, font_scale, color, font_thickness, cv2.LINE_AA)
-            cv2.putText(pair_img, f"{source2} ({label2})", (width + 10, 20), font, font_scale, color, font_thickness, cv2.LINE_AA)
+                cv2.putText(pair_img, f"{source1} ({label1})", (10, 20), font, font_scale, color, font_thickness, cv2.LINE_AA)
+                cv2.putText(pair_img, f"{source2} ({label2})", (width + 10, 20), font, font_scale, color, font_thickness, cv2.LINE_AA)
 
                 # Save
-            filename = f"pair_{num_saved:03d}.png"
-            save_path = os.path.join(save_dir, filename)
-            cv2.imwrite(save_path, pair_img)
+                filename = f"pair_{num_saved:03d}.png"
+                save_path = os.path.join(save_dir, filename)
+                cv2.imwrite(save_path, pair_img)
 
-            num_saved += 1
+                num_saved += 1
 
             if num_saved >= max_to_save:
                 break
