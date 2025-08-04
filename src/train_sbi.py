@@ -75,6 +75,7 @@ def main(args):
     BACKBONE = cfg['backbone']
     CROP_MODE_FF = cfg["crop_mode_ff"]
     WEIGHTED_SAMPLER = cfg["weighted_sampler"] == 1
+    CROP_MODE_TEST = cfg["crop_mode_test"]
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -334,8 +335,8 @@ def main(args):
             best_model = max(weight_dict, key=weight_dict.get)
             if (not best_model in val_set):
                 val_set.add(best_model)
-                for dataset in cfg['test_datasets']:
-                    auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, dataset, False, CROP_MODE)
+                for i in range(cfg['test_datasets']):
+                    auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, cfg["test_datasets"][i], False, CROP_MODE_TEST[i])
                     fpr, tpr, _ = roc_curve(target_list, output_list)
 
                     # Create the ROC figure

@@ -10,6 +10,7 @@
     "val_datasets": ["FF", "MSU-MFSD", "REPLAY-ATTACK", "MOBIO", "SIM-MV2"],
     "test_datasets": ["CDF"],
     "crop_mode_ff": "retina",
+    "crop_mode_test" : ["yunet"], 
     "test_every": 10,
     "degradations": 0,
     "poisson": 0,
