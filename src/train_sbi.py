@@ -73,7 +73,7 @@ def main(args):
     LR_SCHEDULER = cfg['lr_scheduler']
     ADAM = cfg['adam'] == 1
     BACKBONE = cfg['backbone']
-    CROP_MODE = cfg["crop_mode"]
+    CROP_MODE_FF = cfg["crop_mode_ff"]
     WEIGHTED_SAMPLER = cfg["weighted_sampler"] == 1
     seed=5
     random.seed(seed)
@@ -100,7 +100,10 @@ def main(args):
         dataset_list = []
         source_counts = {}
         for dataset_name in cfg["train_datasets"]:
-            dataset = SBI_Custom_Dataset('train', [dataset_name], image_size=image_size, degradations=DEGRADATIONS, poisson=POISSON, random_mask=RANDOM_MASK, crop_mode=CROP_MODE)
+            if (dataset_name == "FF"):
+                dataset = SBI_Custom_Dataset('train', [dataset_name], image_size=image_size, degradations=DEGRADATIONS, poisson=POISSON, random_mask=RANDOM_MASK, crop_mode=CROP_MODE_FF)
+            else:
+                dataset = SBI_Custom_Dataset('train', [dataset_name], image_size=image_size, degradations=DEGRADATIONS, poisson=POISSON, random_mask=RANDOM_MASK, crop_mode='yunet')
             dataset_list.append(dataset)
             source_counts[dataset_name] = len(dataset)
         combined_dataset = ConcatDataset(dataset_list)
@@ -122,7 +125,7 @@ def main(args):
 
     else:
         train_dataset = SBI_Custom_Dataset('train', cfg["train_datasets"], 
-                                       image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE)
+                                       image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE_FF)
         train_loader = DataLoader(train_dataset,
                         batch_size=batch_size//2,
                         shuffle=True,
@@ -133,7 +136,7 @@ def main(args):
                         worker_init_fn=train_dataset.worker_init_fn
                         )
     val_dataset = SBI_Custom_Dataset('val', cfg["val_datasets"], 
-                                     image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE)
+                                     image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE_FF)
     val_loader = DataLoader(val_dataset,
                         batch_size=batch_size,
                         shuffle=False,
