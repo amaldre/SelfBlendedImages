@@ -335,7 +335,7 @@ def main(args):
             best_model = max(weight_dict, key=weight_dict.get)
             if (not best_model in val_set):
                 val_set.add(best_model)
-                for i in range(cfg['test_datasets']):
+                for i in range(len(cfg['test_datasets'])):
                     auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, cfg["test_datasets"][i], False, CROP_MODE_TEST[i])
                     fpr, tpr, _ = roc_curve(target_list, output_list)
 
