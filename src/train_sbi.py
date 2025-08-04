@@ -353,12 +353,12 @@ def main(args):
                     plt.close()
                     if (USE_WANDB):
                         wandb.log({
-                            f"Test/AUC_{dataset}": auc_test,
-                            f"Test/Accuracy_{dataset}": acc_test,
-                            f"Test/AP_{dataset}": ap_test,
-                            f"Test/AR_{dataset}": ar_test,
-                            f"Test/ROC_{dataset}": wandb.plot.roc_curve(target_list, [[1 - p, p] for p in output_list], labels=["pristine", "fake"]),
-                            f"Test/ROC_Image_{dataset}": roc_image,
+                            f"Test/AUC_{cfg['test_datasets'][i]}": auc_test,
+                            f"Test/Accuracy_{cfg['test_datasets'][i]}": acc_test,
+                            f"Test/AP_{cfg['test_datasets'][i]}": ap_test,
+                            f"Test/AR_{cfg['test_datasets'][i]}": ar_test,
+                            f"Test/ROC_{cfg['test_datasets'][i]}": wandb.plot.roc_curve(target_list, [[1 - p, p] for p in output_list], labels=["pristine", "fake"]),
+                            f"Test/ROC_Image_{cfg['test_datasets'][i]}": roc_image,
                             f"Test/Model": int(os.path.basename(best_model).split('_')[0]),
                             f"Test/test_step": epoch / cfg["test_every"]
                         })
