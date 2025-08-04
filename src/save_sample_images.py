@@ -23,7 +23,7 @@ def main():
     DATASETS = ["FF", "MSU-MFSD", "REPLAY-ATTACK", "SIM-MV2", "MOBIO"]
     image_size = 380
     batch_size = 16
-    save_dir = "saved_pairs_with_labels"
+    save_dir = "saved_with_labels"
     max_to_save = 300
 
     os.makedirs(save_dir, exist_ok=True)
@@ -32,7 +32,7 @@ def main():
     dataset_list = []
     source_counts = {}
     for dataset_name in DATASETS:
-        dataset = SBI_Custom_Dataset('val', [dataset_name], image_size=image_size, crop_mode='yunet')
+        dataset = SBI_Custom_Dataset('val', [dataset_name], image_size=image_size, crop_mode='yunet', poisson = True, random_mask= True)
         dataset_list.append(dataset)
         source_counts[dataset_name] = len(dataset)
 
@@ -73,45 +73,41 @@ def main():
             source_ids = data["source_id"]
 
             b = images.size(0)
-            for i in range(0, b, 2):
+            assert b % 2 == 0, "Batch size must be even for pairing"
+            n = b // 2
+
+            for i in range(n):
                 if num_saved >= max_to_save:
                     break
 
-                img1 = images[i]
-                img2 = images[i+1]
-                label1 = labels[i].item()
-                label2 = labels[i+1].item()
+            # Get image pair: i and i + n
+                img1 = (((images[i] + 1) / 2).permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+                img2 = (((images[i + n] + 1) / 2).permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+
+            # Convert to BGR for OpenCV
+                img1 = cv2.cvtColor(img1, cv2.COLOR_RGB2BGR)
+                img2 = cv2.cvtColor(img2, cv2.COLOR_RGB2BGR)
+
+            # Add text to both
                 source1 = DATASETS[source_ids[i].item()]
-                source2 = DATASETS[source_ids[i+1].item()]
+                label1 = labels[i].item()
+                source2 = DATASETS[source_ids[i + n].item()]
+                label2 = labels[i + n].item()
 
-                # Tensor -> NumPy image
-                img1_np = (img1.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
-                img2_np = (img2.permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8)
+                cv2.putText(img1, f"{source1} ({label1})", (10, 20), font, font_scale, color, font_thickness, cv2.LINE_AA)
+                cv2.putText(img2, f"{source2} ({label2})", (10, 20), font, font_scale, color, font_thickness, cv2.LINE_AA)
+                # or use np.concatenate((img1, img2), axis=1)
 
-                # Resize to same dimensions
-                height = max(img1_np.shape[0], img2_np.shape[0])
-                width = max(img1_np.shape[1], img2_np.shape[1])
-                img1_np = cv2.resize(img1_np, (width, height))
-                img2_np = cv2.resize(img2_np, (width, height))
-
-                # Concatenate
-                pair_img = np.concatenate([img1_np, img2_np], axis=1)
-
-                # Add text
-                cv2.putText(pair_img, f"{source1} ({label1})", (10, 20), font, font_scale, color, font_thickness, cv2.LINE_AA)
-                cv2.putText(pair_img, f"{source2} ({label2})", (width + 10, 20), font, font_scale, color, font_thickness, cv2.LINE_AA)
-
-                # Save
-                filename = f"pair_{num_saved:03d}.png"
+            # Save
+                filename = f"{num_saved:03d}_pristine.png"
                 save_path = os.path.join(save_dir, filename)
-                cv2.imwrite(save_path, pair_img)
+                cv2.imwrite(save_path, img1)
+                filename = f"{num_saved:03d}_fake.png"
+                save_path = os.path.join(save_dir, filename)
+                cv2.imwrite(save_path, img2)
+                num_saved += 2
 
-                num_saved += 1
-
-            if num_saved >= max_to_save:
-                break
-
-    print(f"\n✅ {num_saved} image pairs saved in '{save_dir}'")
+        print(f"\n✅ {num_saved} image pairs saved in '{save_dir}'")
 
 if __name__ == '__main__':
     main()
