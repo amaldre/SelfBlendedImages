@@ -381,7 +381,7 @@ class SBI_Custom_Dataset(SBI_Dataset):
 						if iou_max<iou:
 							bbox=bboxes[i]
 							iou_max=iou
-				elif os.path.exists(yunet_path) and self.crop_mode == 'yunet':
+				elif os.path.exists(yunet_path):
 					bbox = np.load(yunet_path)
 				else: 
 					#Shouldn't happen, as yunet boxes are already checked for during dataset initialization
