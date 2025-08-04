@@ -29,19 +29,15 @@ def random_get_hull(landmark, img1, random_mask):
         
     if hull_type == 0:
         mask = dfl_full(landmarks=landmark.astype('int32'),face=img1, channels=3).mask
-        return mask/255
     elif hull_type == 1:
         mask = extended(landmarks=landmark.astype('int32'),face=img1, channels=3).mask
-        return mask/255
     elif hull_type == 2:
         mask = components(landmarks=landmark.astype('int32'),face=img1, channels=3).mask
-        return mask/255
     elif hull_type == 3:
         mask = facehull(landmarks=landmark.astype('int32'),face=img1, channels=3).mask
-        return mask/255
     elif hull_type == 4:
         mask = random_component(landmarks=landmark.astype('int32'),face=img1, channels=3).mask
-        return mask/255
+    return mask/255, hull_type
 
 def random_erode_dilate(mask, ksize=None):
     if random.random()>0.5:

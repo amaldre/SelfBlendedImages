@@ -209,7 +209,8 @@ class SBI_Dataset(Dataset):
 			landmark=landmark[:68]
 		if exist_bi:
 			logging.disable(logging.FATAL)
-			mask=random_get_hull(landmark, img, random_mask)[:,:,0]
+			mask, hull_type = random_get_hull(landmark, img, random_mask)
+			mask = mask[:,:,0]
 			logging.disable(logging.NOTSET)
 		else:
 			mask=np.zeros_like(img[:,:,0])
@@ -224,7 +225,7 @@ class SBI_Dataset(Dataset):
 
 		source, mask = self.randaffine(source,mask)
 
-		img_blended,mask=B.apply_blend(source, img, mask, p_p, poisson)
+		img_blended,mask=B.apply_blend(source, img, mask, p_p, hull_type, poisson)
 		img_blended = img_blended.astype(np.uint8)
 		img = img.astype(np.uint8)
 
