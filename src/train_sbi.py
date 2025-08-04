@@ -345,7 +345,7 @@ def main(args):
                     plt.plot([0, 1], [0, 1], linestyle="--", color="gray")
                     plt.xlabel("False Positive Rate")
                     plt.ylabel("True Positive Rate")
-                    plt.title(f"ROC Curve on {dataset} @ epoch {epoch}")
+                    plt.title(f"ROC Curve on {cfg['test_datasets'][i]} @ epoch {epoch}")
                     plt.legend(loc="lower right")
 
                     # Save it to wandb
