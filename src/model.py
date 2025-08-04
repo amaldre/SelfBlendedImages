@@ -85,5 +85,5 @@ class Detector(nn.Module):
                 else:
                     self.optimizer.second_step(zero_grad=True)
         
-                return pred_first
+            return pred_first
     
