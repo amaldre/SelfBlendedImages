@@ -66,7 +66,7 @@ def get_blend_mask(mask, hull_type):
 	
 	mask_blured = cv2.GaussianBlur(mask, kernel_1, 0)
 	mask_blured = mask_blured/(mask_blured.max())
-	threshold = 1 if hull_type < 4 else 0.8
+	threshold = 1 if hull_type < 4 else 0.7
 	mask_blured[mask_blured < threshold] = 0
 	mask_blured = cv2.GaussianBlur(mask_blured, kernel_2, np.random.randint(5,46))
 	mask_blured = mask_blured/(mask_blured.max())
