@@ -7,6 +7,11 @@
 *.h5
 *.png
 *.zip
+.python-version
+*.txt
+Pipfile
+Pipfile.lock
+
 
 sbi/
 yunet/
