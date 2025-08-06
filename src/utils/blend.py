@@ -38,8 +38,8 @@ def poisson_blend_cv2(source, target, mask):
 	output_rgb = cv2.cvtColor(output_bgr, cv2.COLOR_BGR2RGB)
 	return output_rgb
 
-def apply_blend(source, target, mask, poisson_prob, poisson):
-	mask_blured = get_blend_mask(mask)
+def apply_blend(source, target, mask, poisson_prob, hull_type, poisson):
+	mask_blured = get_blend_mask(mask, hull_type)
 	blend_list=[0.25,0.5,0.75,1,1,1]
 	blend_ratio = blend_list[np.random.randint(len(blend_list))]
 	mask_blured*=blend_ratio	
@@ -52,7 +52,7 @@ def apply_blend(source, target, mask, poisson_prob, poisson):
 		img_blended=(mask_blured * source + (1 - mask_blured) * target)
 	return img_blended, mask_blured
 
-def get_blend_mask(mask):
+def get_blend_mask(mask, hull_type):
 	H,W=mask.shape
 	size_h=np.random.randint(192,257)
 	size_w=np.random.randint(192,257)
@@ -66,8 +66,8 @@ def get_blend_mask(mask):
 	
 	mask_blured = cv2.GaussianBlur(mask, kernel_1, 0)
 	mask_blured = mask_blured/(mask_blured.max())
-	mask_blured[mask_blured<1]=0
-	
+	threshold = 1 if hull_type < 4 else 0.7
+	mask_blured[mask_blured < threshold] = 0
 	mask_blured = cv2.GaussianBlur(mask_blured, kernel_2, np.random.randint(5,46))
 	mask_blured = mask_blured/(mask_blured.max())
 	mask_blured = cv2.resize(mask_blured,(W,H))

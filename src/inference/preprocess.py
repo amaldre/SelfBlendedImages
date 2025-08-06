@@ -1,7 +1,5 @@
 import numpy as np
 import cv2
-from PIL import Image
-import sys
 from tqdm import tqdm
 import os 
 def extract_frames(filename,num_frames,model,image_size=(380,380)):
@@ -55,9 +53,6 @@ def extract_frames(filename,num_frames,model,image_size=(380,380)):
 			print(e)
 			continue
 	cap_org.release()
-
-	
-
 	return croppedfaces,idx_list
 
 def extract_face(frame,model,image_size=(380,380)):

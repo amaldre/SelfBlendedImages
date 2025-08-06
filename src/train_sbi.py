@@ -1,14 +1,18 @@
+import cv2
+cv2.setNumThreads(0)
 import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.data import DataLoader, WeightedRandomSampler, ConcatDataset
 import numpy as np
 import os
 from PIL import Image
 import sys
 import random
-from utils.sbi import SBI_Dataset
-from utils.scheduler import LinearDecayLR
+from utils.sbi import SBI_Dataset, SBI_Custom_Dataset, SourceConcat
+from utils.scheduler import LinearDecayLR, LinearDecayLR_LaaNet, FlatCosineAnnealingLR
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.metrics import confusion_matrix, roc_auc_score, roc_curve
 import argparse
 from utils.logs import log
@@ -25,32 +29,32 @@ from inference.datasets import *
 
 import matplotlib.pyplot as plt
 
-from degradations import degradation
-
-def get_degraded_batch(img_batch, image_list, path_lm, device):
-    degraded_list = []
-    for i in range(img_batch.size(0)):
-        single_img_tensor = img_batch[i]             # (C, H, W)
+# def get_degraded_batch(img_batch, image_list, path_lm, device):
+#     degraded_list = []
+#     for i in range(img_batch.size(0)):
+#         single_img_tensor = img_batch[i]             # (C, H, W)
     
-        single_img_np = single_img_tensor.cpu().numpy()  # (C, H, W)
-        single_img_np = np.transpose(single_img_np, (1, 2, 0))  # (H, W, C) si nécessaire
-        degraded_img_np = degradation(single_img_np, image_list, path_lm)
+#         single_img_np = single_img_tensor.cpu().numpy()  # (C, H, W)
+#         single_img_np = np.transpose(single_img_np, (1, 2, 0))  # (H, W, C) si nécessaire
+#         degraded_img_np = degradation(single_img_np, image_list, path_lm)
     
-        # Reconvertir en tensor (C, H, W)
-        degraded_img_np = np.transpose(degraded_img_np, (2, 0, 1))  # (C, H, W)
-        degraded_img_tensor = torch.from_numpy(degraded_img_np).to(device).float()
+#         # Reconvertir en tensor (C, H, W)
+#         degraded_img_np = np.transpose(degraded_img_np, (2, 0, 1))  # (C, H, W)
+#         degraded_img_tensor = torch.from_numpy(degraded_img_np).to(device).float()
 
-        degraded_list.append(degraded_img_tensor)
+#         degraded_list.append(degraded_img_tensor)
 
-        # Empiler pour obtenir un batch final
-    degraded_img_batch = torch.stack(degraded_list, dim=0) 
-    return degraded_img_batch
+#         # Empiler pour obtenir un batch final
+#     degraded_img_batch = torch.stack(degraded_list, dim=0) 
+#     return degraded_img_batch
 
-def test(model_path, dataset, plot_bool):
+def test(model_path, dataset, plot_bool, crop_mode):
     args = argparse.Namespace(
     weight_name=model_path,
     dataset=dataset,
-    plot = plot_bool
+    plot = plot_bool, 
+    confmat = False,
+    crop_mode = crop_mode
     )
     return infer(args)
 
@@ -65,6 +69,13 @@ def main(args):
     DEGRADATIONS = cfg['degradations'] == 1
     POISSON = cfg['poisson'] == 1
     RANDOM_MASK = cfg['random_mask'] == 1
+    FREEZE = cfg['freeze']
+    LR_SCHEDULER = cfg['lr_scheduler']
+    ADAM = cfg['adam'] == 1
+    BACKBONE = cfg['backbone']
+    CROP_MODE_FF = cfg["crop_mode_ff"]
+    WEIGHTED_SAMPLER = cfg["weighted_sampler"] == 1
+    CROP_MODE_TEST = cfg["crop_mode_test"]
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -78,10 +89,45 @@ def main(args):
 
     image_size=cfg['image_size']
     batch_size=cfg['batch_size']
-    train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
-    val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
-   
-    train_loader=torch.utils.data.DataLoader(train_dataset,
+    # train_dataset=SBI_Dataset(phase='train',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    # val_dataset=SBI_Dataset(phase='val',image_size=image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    # train_dataset = SBI_Custom_Dataset('train', ['FF', 'MSU-MFSD', 'REPLAY-ATTACK', 'MOBIO', 'SIM-MV2'], 
+    #                                    image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    # val_dataset = SBI_Custom_Dataset('val', ['FF', 'MSU-MFSD', 'REPLAY-ATTACK', 'MOBIO', 'SIM-MV2'], 
+    #                                  image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK)
+    
+    if WEIGHTED_SAMPLER:
+        print("Using weighted sampler")
+        dataset_list = []
+        source_counts = {}
+        for dataset_name in cfg["train_datasets"]:
+            if (dataset_name == "FF"):
+                dataset = SBI_Custom_Dataset('train', [dataset_name], image_size=image_size, degradations=DEGRADATIONS, poisson=POISSON, random_mask=RANDOM_MASK, crop_mode=CROP_MODE_FF)
+            else:
+                dataset = SBI_Custom_Dataset('train', [dataset_name], image_size=image_size, degradations=DEGRADATIONS, poisson=POISSON, random_mask=RANDOM_MASK, crop_mode='yunet')
+            dataset_list.append(dataset)
+            source_counts[dataset_name] = len(dataset)
+        combined_dataset = ConcatDataset(dataset_list)
+        source_ids = []
+        for i in range(len(cfg["train_datasets"])):
+            source_ids.extend([i] * source_counts[cfg["train_datasets"][i]])
+        source_weights = [1.0 / count for count in source_counts.values()]
+        sample_weights = [source_weights[id] for id in source_ids]
+
+        sampler = WeightedRandomSampler(weights=torch.DoubleTensor(sample_weights), num_samples=len(sample_weights))
+
+        train_loader = DataLoader(combined_dataset, batch_size=batch_size//2, 
+                                  collate_fn = dataset_list[0].collate_fn, 
+                                  num_workers = 4,
+                                  pin_memory = True,
+                                  drop_last = True,
+                                  worker_init_fn = dataset_list[0].worker_init_fn,
+                                  sampler=sampler)
+
+    else:
+        train_dataset = SBI_Custom_Dataset('train', cfg["train_datasets"], 
+                                       image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE_FF)
+        train_loader = DataLoader(train_dataset,
                         batch_size=batch_size//2,
                         shuffle=True,
                         collate_fn=train_dataset.collate_fn,
@@ -90,7 +136,9 @@ def main(args):
                         drop_last=True,
                         worker_init_fn=train_dataset.worker_init_fn
                         )
-    val_loader=torch.utils.data.DataLoader(val_dataset,
+    val_dataset = SBI_Custom_Dataset('val', cfg["val_datasets"], 
+                                     image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE_FF)
+    val_loader = DataLoader(val_dataset,
                         batch_size=batch_size,
                         shuffle=False,
                         collate_fn=val_dataset.collate_fn,
@@ -99,8 +147,12 @@ def main(args):
                         worker_init_fn=val_dataset.worker_init_fn
                         )
     
-    model=Detector()
-    
+    model=Detector(lr = cfg['lr'], adam = ADAM, backbone = BACKBONE)
+    if len(cfg["weight_path"]):
+        cnn_sd = torch.load(cfg["weight_path"])["model"]
+        model.load_state_dict(cnn_sd)
+    if FREEZE > 0:
+        model.freeze()
     model=model.to('cuda')
     
     
@@ -113,7 +165,17 @@ def main(args):
     val_accs=[]
     val_losses=[]
     n_epoch=cfg['epoch']
-    lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
+    if (LR_SCHEDULER.upper() == 'LAA-NET'):
+        lr_scheduler = LinearDecayLR_LaaNet(model.optimizer, n_epoch, n_epoch//4, last_epoch= -1, booster=4)
+    elif (LR_SCHEDULER.upper() == 'SBI'):
+        lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
+    elif (LR_SCHEDULER.upper() == 'COSINE'):
+        lr_scheduler = FlatCosineAnnealingLR(model.optimizer, n_epoch, FREEZE)
+    elif (LR_SCHEDULER.upper() == 'PMM'):
+        lr_scheduler = ReduceLROnPlateau(model.optimizer, mode='min', factor=0.2, patience=10)
+    else:
+        print('Unknown LR Scheduler, defaulting to SBI base scheduler')
+        lr_scheduler=LinearDecayLR(model.optimizer, n_epoch, int(n_epoch/4*3))
     #last_loss=99999
 
 
@@ -143,8 +205,17 @@ def main(args):
             resume=False
         )
 
+    #final_transforms = get_final_transforms()
+    needs_unfreezing = FREEZE > 0
     for epoch in range(n_epoch):
+        if needs_unfreezing and epoch >= FREEZE:
+            model.unfreeze()
+            needs_unfreezing = False
+            print("Changing post freeze learning rate")
+            for param_group in model.optimizer.param_groups:
+                param_group['lr'] = 0.0001
         np.random.seed(seed + epoch)
+        random.seed(seed + epoch) 
         train_loss = 0.
         train_acc = 0.
         train_probs = []
@@ -153,8 +224,6 @@ def main(args):
 
         for step, data in enumerate(tqdm(train_loader)):
             img = data['img'].to(device, non_blocking=True).float()
-            if DEGRADATIONS:
-                img = get_degraded_batch(img, train_dataset.image_list, train_dataset.path_lm, device)
             target = data['label'].to(device, non_blocking=True).long()
 
             output = model.training_step(img, target)
@@ -194,8 +263,6 @@ def main(args):
         np.random.seed(seed)
         for step, data in enumerate(tqdm(val_loader)):
             img = data['img'].to(device, non_blocking=True).float()
-            if DEGRADATIONS:
-                img = get_degraded_batch(img, val_dataset.image_list, val_dataset.path_lm, device)
             target = data['label'].to(device, non_blocking=True).long()
 
             with torch.no_grad():
@@ -219,10 +286,10 @@ def main(args):
             val_acc / len(val_loader),
             val_auc
         )
-        
+        val_loss = val_loss/len(val_loader)
         if USE_WANDB:
             wandb.log({
-                'Val/Loss': val_loss / len(val_loader),
+                'Val/Loss': val_loss,
                 'Val/Accuracy': val_acc / len(val_loader),
                 'Val/AUC': val_auc,
                 'Train/Loss': train_loss / len(train_loader),
@@ -232,7 +299,10 @@ def main(args):
                 'epoch': epoch
             })
 
-        lr_scheduler.step()
+        if (LR_SCHEDULER.upper() == 'PMM'):
+            lr_scheduler.step(val_loss)
+        else:
+            lr_scheduler.step()
 
 
         if len(weight_dict) < n_weight or epoch == n_epoch - 1:
@@ -241,7 +311,8 @@ def main(args):
             torch.save({
                 "model": model.state_dict(),
                 "optimizer": model.optimizer.state_dict(),
-                "epoch": epoch
+                "epoch": epoch,
+                'backbone': model.backbone,
             }, save_model_path)
             last_val_auc = min([weight_dict[k] for k in weight_dict])
         elif val_auc >= last_val_auc:
@@ -255,16 +326,17 @@ def main(args):
             torch.save({
                 "model": model.state_dict(),
                 "optimizer": model.optimizer.state_dict(),
-                "epoch": epoch
+                "epoch": epoch,
+                'backbone': model.backbone,
             }, save_model_path)
             last_val_auc = min([weight_dict[k] for k in weight_dict])
 
-        if (not epoch % cfg["test_every"]):
+        if (not epoch % cfg["test_every"] or epoch == n_epoch - 1):
             best_model = max(weight_dict, key=weight_dict.get)
             if (not best_model in val_set):
                 val_set.add(best_model)
-                for dataset in cfg['test_datasets']:
-                    auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, dataset, False)
+                for i in range(len(cfg['test_datasets'])):
+                    auc_test, acc_test, ap_test, ar_test, target_list, output_list = test(best_model, cfg["test_datasets"][i], False, CROP_MODE_TEST[i])
                     fpr, tpr, _ = roc_curve(target_list, output_list)
 
                     # Create the ROC figure
@@ -273,7 +345,7 @@ def main(args):
                     plt.plot([0, 1], [0, 1], linestyle="--", color="gray")
                     plt.xlabel("False Positive Rate")
                     plt.ylabel("True Positive Rate")
-                    plt.title(f"ROC Curve on {dataset} @ epoch {epoch}")
+                    plt.title(f"ROC Curve on {cfg['test_datasets'][i]} @ epoch {epoch}")
                     plt.legend(loc="lower right")
 
                     # Save it to wandb
@@ -281,12 +353,12 @@ def main(args):
                     plt.close()
                     if (USE_WANDB):
                         wandb.log({
-                            f"Test/AUC_{dataset}": auc_test,
-                            f"Test/Accuracy_{dataset}": acc_test,
-                            f"Test/AP_{dataset}": ap_test,
-                            f"Test/AR_{dataset}": ar_test,
-                            f"Test/ROC_{dataset}": wandb.plot.roc_curve(target_list, [[1 - p, p] for p in output_list], labels=["pristine", "fake"]),
-                            f"Test/ROC_Image_{dataset}": roc_image,
+                            f"Test/AUC_{cfg['test_datasets'][i]}": auc_test,
+                            f"Test/Accuracy_{cfg['test_datasets'][i]}": acc_test,
+                            f"Test/AP_{cfg['test_datasets'][i]}": ap_test,
+                            f"Test/AR_{cfg['test_datasets'][i]}": ar_test,
+                            f"Test/ROC_{cfg['test_datasets'][i]}": wandb.plot.roc_curve(target_list, [[1 - p, p] for p in output_list], labels=["pristine", "fake"]),
+                            f"Test/ROC_Image_{cfg['test_datasets'][i]}": roc_image,
                             f"Test/Model": int(os.path.basename(best_model).split('_')[0]),
                             f"Test/test_step": epoch / cfg["test_every"]
                         })
@@ -297,6 +369,7 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser()
     parser.add_argument(dest='config')
     parser.add_argument('-n',dest='session_name')
+    parser.add_argument('-w', dest = 'pretrained_weights', default = '')
     args=parser.parse_args()
     main(args)
         

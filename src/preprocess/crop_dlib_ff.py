@@ -1,12 +1,8 @@
 from glob import glob
 import os
-import pandas as pd
 import cv2
 from tqdm import tqdm
 import numpy as np
-import shutil
-import json
-import sys
 import argparse
 import dlib
 from imutils import face_utils
@@ -34,11 +30,10 @@ def facecrop(org_path,save_path,face_detector,face_predictor,period=1,num_frames
                 continue
 
         ret_org, frame_org = cap_org.read()
-        height,width=frame_org.shape[:-1]
         if not ret_org:
             tqdm.write('Frame read {} Error! : {}'.format(cnt_frame,os.path.basename(org_path)))
             break
-        
+        height,width=frame_org.shape[:-1]
         if cnt_frame not in frame_idxs:
             continue
         
@@ -72,15 +67,20 @@ def facecrop(org_path,save_path,face_detector,face_predictor,period=1,num_frames
     cap_org.release()
     return
 
+from pathlib import Path
+
+def find_all_videos(root_dir, extensions=('.mp4', '.mov', '.avi', '.mkv')):
+    return [str(p) for p in Path(root_dir).rglob('*') if p.suffix.lower() in extensions]
+
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser()
-    parser.add_argument('-d',dest='dataset',choices=['DeepFakeDetection_original','DeepFakeDetection','FaceShifter','Face2Face','Deepfakes','FaceSwap','NeuralTextures','Original','Celeb-real','Celeb-synthesis','YouTube-real','DFDC','DFDCP', 'gitw'])
+    parser.add_argument('-d',dest='dataset')
     parser.add_argument('-c',dest='comp',choices=['raw','c23','c40'],default='raw')
     parser.add_argument('-n',dest='num_frames',type=int,default=32)
     args=parser.parse_args()
     if args.dataset=='Original':
-        dataset_path='/datasets/FaceForensics++/original_download/original_sequences/youtube/'
+        dataset_path=['/mnt/ssd_nvme2/datasets/FaceForensics++/original_download/original_sequences/youtube/']
     elif args.dataset=='DeepFakeDetection_original':
         dataset_path='data/FaceForensics++/original_sequences/actors/{}/'.format(args.comp)
     elif args.dataset in ['DeepFakeDetection','FaceShifter','Face2Face','Deepfakes','FaceSwap','NeuralTextures']:
@@ -90,7 +90,17 @@ if __name__=='__main__':
     elif args.dataset in ['DFDC']:
         dataset_path='data/{}/'.format(args.dataset)
     elif args.dataset.upper() == 'GITW':
-        dataset_path = '/home/alicia/dataShareID/GitW/'
+        dataset_path = ['/home/alicia/dataShareID/GitW/']
+    elif args.dataset.upper() == 'MSU-MFD':
+        dataset_path = ['/home/alicia/dataShareID/temp_datasets/MSU-MFD Database/MSU-MFSD/MSU-MFSD-Publish/scene01/real/']
+    elif args.dataset.upper() == 'SIM-MV2':
+        dataset_path = ['/home/alicia/dataShareID/temp_datasets/SiW-Mv2/Live/']
+    elif args.dataset.upper() == 'REPLAY-ATTACK':
+        dataset_path = ['/home/alicia/dataShareID/temp_datasets/Replay-Attack dataset/train/real/', 
+                        '/home/alicia/dataShareID/temp_datasets/Replay-Attack dataset/test/real/']
+    elif args.dataset.upper() == 'MOBIO':
+        dataset_path = ['/home/alicia/dataShareID/temp_datasets/PHASE1_ALL',
+                        '/home/alicia/dataShareID/temp_datasets/PHASE2_ALL']
     else:
         raise NotImplementedError
 
@@ -98,22 +108,35 @@ if __name__=='__main__':
     predictor_path = 'src/preprocess/shape_predictor_81_face_landmarks.dat'
     face_predictor = dlib.shape_predictor(predictor_path)
     
-    movies_path=dataset_path
-    print(movies_path)
-
-    movies_path_list=sorted(glob(movies_path+'*.mp4'))
-    print("{} : videos are exist in {}".format(len(movies_path_list),args.dataset))
+    movies_path_list = []
+    if args.dataset.upper() == 'MOBIO':
+        for movies_path in dataset_path:
+            movies_path_list += find_all_videos(movies_path)
+    else: 
+        for movies_path in dataset_path:
+            movies_path_list += sorted(glob(movies_path+'*.mp4'))
+            movies_path_list += sorted(glob(movies_path+'*.mov'))
+            movies_path_list += sorted(glob(movies_path+'*.avi'))
+    print("{} : videos are exist in {}".format(len(movies_path_list), args.dataset))
 
 
     n_sample=len(movies_path_list)
 
     if args.dataset=='Original': 
-        SAVE_PATH = r"/datasets/FaceForensics++/sbi/"
+        SAVE_PATH = r"/mnt/ssd_nvme2/datasets/FaceForensics++/sbi/"
     elif args.dataset.upper() == 'GITW':
         SAVE_PATH = r"/home/alicia/SelfBlendedImages/"
+    elif args.dataset.upper() == 'MSU-MFD':
+        SAVE_PATH = r'/home/alicia/SelfBlendedImages/msu-mfsd/'
+    elif args.dataset.upper() == 'SIM-MW2':
+        SAVE_PATH = r'/home/alicia/SelfBlendedImages/sim-mw2/'
+    elif args.dataset.upper() == 'REPLAY-ATTACK':
+        SAVE_PATH = r'/home/alicia/SelfBlendedImages/replay-attack/'
+    elif args.dataset.upper() == 'MOBIO':
+        SAVE_PATH = r'/home/alicia/SelfBlendedImages/mobio/'
     else:
         raise NotImplementedError
-    
+    #TODO fix replace
     for i in tqdm(range(n_sample)):
         folder_path=movies_path_list[i].replace('videos/','frames/').replace('.mp4','/')
         facecrop(movies_path_list[i],save_path=SAVE_PATH,num_frames=args.num_frames,face_predictor=face_predictor,face_detector=face_detector)

@@ -7,6 +7,7 @@ from PIL import Image
 from glob import glob 
 import os
 import pandas as pd
+import re
 
 
 TXT_DIR = 'txt_files_face_machine'

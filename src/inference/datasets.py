@@ -1,9 +1,6 @@
 from glob import glob
 import os
-import sys
 import json
-import numpy as np
-from PIL import Image
 from glob import glob 
 import os
 import pandas as pd
@@ -51,6 +48,8 @@ def init_dataset(dataset):
 		video_list, target_list, video_root = init_team() 
 	elif dataset.upper() == 'FAKE_TEAM':
 		video_list, target_list, video_root = init_fake_team()
+	elif dataset.upper() == 'NOISY_ALEXANDRE':
+		video_list, target_list, video_root = init_noisy_alexandre()
 	else:
 		print(dataset)
 		NotImplementedError
@@ -201,7 +200,7 @@ def init_custom_folder(video_root, label):
 	return folder_list, label_list, video_root
 
 def init_alexandre():
-	video_root = 'ShareIdFake/output'
+	video_root = 'alexandre_24-07_4/perfect_match_box_simswap_256_gfpgan_1.4_75_0.7_noise_flou'
 	return init_custom_folder(video_root, 1)
 
 def init_alexandre_pristine():
@@ -216,6 +215,10 @@ def init_team():
 
 def init_fake_team():
 	video_root = 'ShareIDFake/output'
+	return init_custom_folder(video_root, 1)
+
+def init_noisy_alexandre():
+	video_root = 'noisy_alexandre'
 	return init_custom_folder(video_root, 1)
 #91
 #alexandre| AUC: N/A (only one label), Accuracy: 0.0909, Avg Precision:  N/A (only one label), Avg Recall:  N/A (only one label)

@@ -12,7 +12,6 @@ from PIL import Image
 import sys
 import random
 import shutil
-from model import Detector
 import argparse
 from datetime import datetime
 from tqdm import tqdm
@@ -22,11 +21,18 @@ import warnings
 import cv2
 warnings.filterwarnings('ignore')
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
+from utils.sbi import get_final_transforms
+from model import Detector
 def main(args):
 
-    model = Detector().to(device)
+    final_transforms = get_final_transforms()
+
     cnn_sd = torch.load(args.weight_name)["model"]
+    try:
+        backbone = torch.load(args.weight_name)["bakcbone"] 
+    except:
+        backbone = "efficientnet-b4"
+    model = Detector(backbone=backbone, phase = 'test').to(device)
     model.load_state_dict(cnn_sd)
     model.eval()
 
@@ -39,6 +45,8 @@ def main(args):
     # Infer
     with torch.no_grad():
         img_tensor = torch.tensor(face_list).to(device).float() / 255
+        for i in range(img_tensor.shape[0]):
+            img_tensor[i] = final_transforms(img_tensor[i])
         pred = model(img_tensor).softmax(1)[:, 1]  # Probability for class 1
 
     # Prepare output folder

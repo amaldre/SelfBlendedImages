@@ -6,7 +6,7 @@
 
 import torch
 from torchvision import datasets,transforms,utils
-from torch.utils.data import Dataset,IterableDataset
+from torch.utils.data import Dataset,IterableDataset, ConcatDataset
 from glob import glob
 import os
 import numpy as np
@@ -39,7 +39,11 @@ else:
     print('library or bi_online_generation.py does not exist at the expected path.')
     exist_bi = False
 
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from degradations import degradation
 print(f"exist_bi: {exist_bi}")
+
 
 class SBI_Dataset(Dataset):
 	def __init__(self,phase='train',image_size=224,n_frames=8, degradations = False, poisson = False, random_mask = False):
@@ -67,6 +71,7 @@ class SBI_Dataset(Dataset):
 		self.degradations = degradations
 		self.poisson = poisson
 		self.random_mask = random_mask
+		self.final_transforms = get_final_transforms()
 
 
 	def __len__(self):
@@ -124,6 +129,13 @@ class SBI_Dataset(Dataset):
 				#Resize to config size
 				img_f=cv2.resize(img_f,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
 				img_r=cv2.resize(img_r,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
+
+				if (self.degradations):
+					img_f = degradation(img_f, self.image_list, self.path_lm)
+					img_r = degradation(img_r, self.image_list, self.path_lm)
+
+				img_f = self.final_transforms(img_f)
+				img_r = self.final_transforms(img_r)
 
 				#Transpose
 				img_f=img_f.transpose((2,0,1))
@@ -197,7 +209,8 @@ class SBI_Dataset(Dataset):
 			landmark=landmark[:68]
 		if exist_bi:
 			logging.disable(logging.FATAL)
-			mask=random_get_hull(landmark, img, random_mask)[:,:,0]
+			mask, hull_type = random_get_hull(landmark, img, random_mask)
+			mask = mask[:,:,0]
 			logging.disable(logging.NOTSET)
 		else:
 			mask=np.zeros_like(img[:,:,0])
@@ -212,7 +225,7 @@ class SBI_Dataset(Dataset):
 
 		source, mask = self.randaffine(source,mask)
 
-		img_blended,mask=B.apply_blend(source, img, mask, p_p, poisson)
+		img_blended,mask=B.apply_blend(source, img, mask, p_p, hull_type, poisson)
 		img_blended = img_blended.astype(np.uint8)
 		img = img.astype(np.uint8)
 
@@ -301,6 +314,165 @@ class SBI_Dataset(Dataset):
 	def worker_init_fn(self,worker_id):                                                          
 		np.random.seed(np.random.get_state()[1][0] + worker_id)
 
+def get_final_transforms():
+	return transforms.Lambda(lambda img: img * 2.0 - 1.0)
+
+
+class SBI_Custom_Dataset(SBI_Dataset):
+	def init_datasets(self, phase, datasets, n_frames):
+		self.image_list = []
+		assert phase in ['train','val','test']
+		if ('FF' in datasets):
+			image_list_ff, _ = init_ff(phase,'frame',n_frames=n_frames)
+			image_list_ff=[image_list_ff[i] for i in range(len(image_list_ff)) if os.path.isfile(image_list_ff[i].replace('/frames/', self.path_lm).replace('.png','.npy')) and os.path.isfile(image_list_ff[i].replace('/frames/',f'/{self.crop_mode}/').replace('.png','.npy'))]
+			print(f'SBI_FF({phase}): {len(image_list_ff)}')
+			self.image_list += image_list_ff
+		if ('MSU-MFSD' in datasets):
+			image_list_msu_mfsd, _ = init_MSU_MFD(phase, n_frames)
+			print(f'SBI_MSU_MFSD({phase}): {len(image_list_msu_mfsd)}')
+			self.image_list += image_list_msu_mfsd
+		if ('REPLAY-ATTACK' in datasets):
+			image_list_replay_attack, _ = init_replay_attack(phase, n_frames)
+			print(f'SBI_REPLAY_ATTACK({phase}): {len(image_list_replay_attack)}')
+			self.image_list += image_list_replay_attack
+		if ('MOBIO' in datasets):
+			image_list_mobio, _ = init_mobio(phase, n_frames)
+			print(f'SBI_MOBIO({phase}): {len(image_list_mobio)}')
+			self.image_list += image_list_mobio
+		if ('SIM-MV2' in datasets):
+			image_list_sim_mv2, _ = init_sim_mw2(phase, n_frames)
+			print(f'SBI_SIM_MV2({phase}): {len(image_list_sim_mv2)}')
+			self.image_list += image_list_sim_mv2
+
+	def __init__(self, phase='train', datasets = ['FF'], image_size=224,n_frames=8, degradations = False, poisson = False, random_mask = False, crop_mode = 'retina'):
+		path_lm='/landmarks/' 
+		self.path_lm=path_lm
+		self.crop_mode = crop_mode
+		self.init_datasets(phase, datasets, n_frames)
+		self.image_size=(image_size,image_size)
+		self.phase=phase
+		self.n_frames=n_frames
+		self.transforms=self.get_transforms()
+		self.source_transforms = self.get_source_transforms()
+		self.degradations = degradations
+		self.poisson = poisson
+		self.random_mask = random_mask
+		self.final_transforms = get_final_transforms()
+	def __getitem__(self,idx):
+		flag=True
+		while flag:
+			try:
+				#Initialization
+				filename=self.image_list[idx]
+				img=np.array(Image.open(filename))
+				#Get dlib landmarks
+				landmark=np.load(filename.replace('.png','.npy').replace('/frames/',self.path_lm))[0]
+				#Get dlib bounding landmarks
+				bbox_lm=np.array([landmark[:,0].min(),landmark[:,1].min(),landmark[:,0].max(),landmark[:,1].max()])
+				#Get to two first bounding boxes detected by retina
+				retina_path = filename.replace('.png','.npy').replace('/frames/','/retina/')
+				yunet_path = filename.replace('.png','.npy').replace('/frames/','/yunet/')
+				if os.path.exists(retina_path) and self.crop_mode == 'retina':
+					bboxes=np.load(filename.replace('.png','.npy').replace('/frames/','/retina/'))[:2]
+					#Finding face with highest iou
+					iou_max=-1
+					for i in range(len(bboxes)):
+						iou=IoUfrom2bboxes(bbox_lm,bboxes[i].flatten())
+						if iou_max<iou:
+							bbox=bboxes[i]
+							iou_max=iou
+				elif os.path.exists(yunet_path):
+					bbox = np.load(yunet_path)
+				else: 
+					#Shouldn't happen, as yunet boxes are already checked for during dataset initialization
+					print(f"Can't find bounding boxes for {filename}")
+					continue
+					
+				#Reorder landmark
+				landmark=self.reorder_landmark(landmark)
+
+				#If training, random chance of flipping image
+				if self.phase=='train':
+					if np.random.rand()<0.5:
+						#Function is same as LAA-Net
+						img,_,landmark,bbox=self.hflip(img,None,landmark,bbox)
+
+				#Get img landmarks and bbox for self-blending		
+				img,landmark,bbox,__=crop_face(img,landmark,bbox,margin=True,crop_by_bbox=False)
+
+				#Get self blending pristine and fake 
+				img_r,img_f,mask_f=self.self_blending(img.copy(),landmark.copy(), self.poisson, self.random_mask)
+				
+				#Augment during training
+				if self.phase=='train' and not self.degradations:
+					transformed=self.transforms(image=img_f.astype('uint8'),image1=img_r.astype('uint8'))
+					img_f=transformed['image']
+					img_r=transformed['image1']
+					
+				
+				#Crop on fake image between 5 and 20% around face
+				img_f,_,__,___,y0_new,y1_new,x0_new,x1_new=crop_face(img_f,landmark,bbox,margin=False,crop_by_bbox=True,abs_coord=True,phase=self.phase)
+				
+				#Apply same thing for pristine image
+				img_r=img_r[y0_new:y1_new,x0_new:x1_new]
+				
+				#Resize to config size
+				img_f=cv2.resize(img_f,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
+				img_r=cv2.resize(img_r,self.image_size,interpolation=cv2.INTER_LINEAR).astype('float32')/255
+
+				if (self.degradations):
+					img_f = degradation(img_f, self.image_list, self.path_lm)
+					img_r = degradation(img_r, self.image_list, self.path_lm)
+
+				img_f = self.final_transforms(img_f)
+				img_r = self.final_transforms(img_r)
+
+				#Transpose
+				img_f=img_f.transpose((2,0,1))
+				img_r=img_r.transpose((2,0,1))
+
+				flag=False
+			except Exception as e:
+				print(e)
+				print(filename)
+				idx=torch.randint(low=0,high=len(self),size=(1,)).item()
+		
+		return img_f,img_r
+	
+class SourceConcat(ConcatDataset):
+	def __init__(self, datasets):
+		super().__init__(datasets)
+		self.datasets = datasets
+		self.concat = ConcatDataset(datasets)
+		self.source_ids = self._build_source_index()
+
+	def _build_source_index(self):
+		source_ids = []
+		for i, dataset in enumerate(self.datasets):
+			source_ids.extend([i] * len(dataset))
+		return source_ids
+
+	def __len__(self):
+		return len(self.concat)
+
+	def __getitem__(self, idx):
+		sample = super().__getitem__(idx)
+		source_id = self.source_ids[idx]
+		if isinstance(sample, tuple):
+			sample = {'img_f': sample[0], 'img_r': sample[1]}
+		sample["source_id"] = source_id
+		return sample
+	
+	def custom_collate_fn(self, batch):
+		img_f = [torch.tensor(sample['img_f']) for sample in batch]
+		img_r = [torch.tensor(sample['img_r']) for sample in batch]
+		source_ids = [sample['source_id'] for sample in batch]
+		data = {}
+		data['img'] = torch.cat([torch.stack(img_r).float(), torch.stack(img_f).float()], 0)
+		data['label'] = torch.tensor([0]*len(img_r) + [1]*len(img_f), dtype=torch.long)
+		data['source_id'] = torch.tensor(source_ids * 2, dtype=torch.long)
+		return data
+
 if __name__=='__main__':
 	import blend as B
 	from initialize import *
@@ -334,3 +506,5 @@ else:
 	from .funcs import IoUfrom2bboxes,crop_face,RandomDownScale
 	if exist_bi:
 		from utils.library.bi_online_generation import random_get_hull
+
+

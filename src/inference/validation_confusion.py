@@ -9,6 +9,7 @@ from tqdm import tqdm
 import warnings
 import pickle
 import seaborn as sns  # For confusion matrix heatmap
+from torch.utils.data import DataLoader
 
 warnings.filterwarnings('ignore')
 
@@ -26,24 +27,22 @@ from sklearn.metrics import (
     roc_curve,
 )
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from utils.sbi import get_final_transforms
+from utils.sbi import SBI_Custom_Dataset
 from model import Detector
 
-
+DATASETS = []
 def main(args):
     device = torch.device('cuda')
-    final_transforms = get_final_transforms()
-    _, target_list, video_root = init_dataset(args.dataset)
-
-
-    data_path_retina = os.path.join(CROP_DIR, video_root, 'video_data.pkl')
-    data_path_yunet = os.path.join(CROP_DIR, video_root, 'video_data_yunet.pkl')
-    if (os.path.exists(data_path_yunet) and args.crop_mode == 'yunet'):
-        print("Using yunet crop for inference")
-        video_data_path = data_path_yunet
-    elif (os.path.exists(data_path_retina)):
-        print("Using retina crop for inference" and args.crop_mode == 'retina')
-        video_data_path = data_path_retina
+    val_dataset = SBI_Custom_Dataset('val', DATASETS, 
+                                     image_size = 380, degradations = False, poisson = True, random_mask = True, crop_mode = 'retina')
+    val_loader = DataLoader(val_dataset,
+                        batch_size=16,
+                        shuffle=False,
+                        collate_fn=val_dataset.collate_fn,
+                        num_workers=4,
+                        pin_memory=True,
+                        worker_init_fn=val_dataset.worker_init_fn
+                        )
     print("------Inference mode------")
     print(f"Testing model {os.path.basename(args.weight_name)}")
 
@@ -60,38 +59,18 @@ def main(args):
     model.eval()
 
     output_list = []
-    with open(video_data_path, 'rb') as f:
-        video_data = pickle.load(f)
-
+    target_list = []
     count = 0
-    for filename in tqdm(video_data.keys()):
-        try:
-            face_list = video_data[filename]['face_list']
-            idx_list = video_data[filename]['idx_list']
+    for step, data in enumerate(tqdm(val_loader)):
+            img = data['img'].to(device, non_blocking=True).float()
+            target = data['label'].to(device, non_blocking=True).long()
 
             with torch.no_grad():
-                img = torch.tensor(face_list).to(device).float() / 255
-                for i in range(img.shape[0]):
-                    img[i] = final_transforms(img[i])
-                pred = model(img).softmax(1)[:, 1]
+                output = model(img)
 
-            pred_list = []
-            idx_img = -1
-            for i in range(len(pred)):
-                if idx_list[i] != idx_img:
-                    pred_list.append([])
-                    idx_img = idx_list[i]
-                pred_list[-1].append(pred[i].item())
-            pred_res = np.zeros(len(pred_list))
-            for i in range(len(pred_res)):
-                pred_res[i] = max(pred_list[i])
-            pred = pred_res.mean()
-        except Exception as e:
-            print(e)
-            pred = 0.5
-        output_list.append(pred)
-        print(f"{filename}: {pred}, actual: {target_list[count]}")
-        count += 1
+            #iter_loss.append(loss_value)
+            output_list += output.softmax(1)[:, 1].cpu().data.numpy().tolist()
+            target_list += target.cpu().data.numpy().tolist()
 
     you_auc = True
     try:
@@ -185,7 +164,6 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-w', dest='weight_name', type=str)
-    parser.add_argument('-d', dest='dataset', type=str)
     parser.add_argument('-plot', dest='plot', action='store_true', default=False)
     parser.add_argument('-print', dest='print', action='store_true', default=False)
     parser.add_argument('-confmat', dest='confmat', action='store_true', default=False, help="Enable confusion matrix print and plot")

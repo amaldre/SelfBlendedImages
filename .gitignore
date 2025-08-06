@@ -7,14 +7,20 @@
 *.h5
 *.png
 *.zip
+.python-version
+*.txt
+Pipfile
+Pipfile.lock
+
 
 sbi/
-sbi3.9/
+yunet/
 wandb/
 output/
 crop_data/
 src/utils/library/README.md
 src/utils/library/precomuted_landmarks.json
 src/utils/library/LICENSE
-.gitignore
 src/utils/library/all_in_one.jpg
+yunet_face/
+faceDetectionModule.py
