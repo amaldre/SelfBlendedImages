@@ -9,9 +9,14 @@ import os
 import pandas as pd
 
 T7 = '/media/alicia/T7/ShareID/TestDataSets'
-DATASHAREID = "/media/alicia/dataShareID"
+DATASHAREID = "/home/alicia/"
 CROP_DIR = 'crop_data'
 VID_EXTENSIONS = {'.mp4', '.mov', '.avi'}
+FACE_MACHINE_TXT_DIR = "txt_files_face_machine"
+
+def file_to_list(path):
+    with open(path) as f:
+        return [line.strip() for line in f if line.strip()]
 
 def init_dataset(dataset):
 	if dataset == 'FFIW':
@@ -53,29 +58,20 @@ def init_dataset(dataset):
 
 
 def init_ff(dataset='all',phase='test'):
+	ROOT = '/home/alicia/datasets/FaceForensics++'
 	video_root = "FaceForensics++"
 	assert dataset in ['all','Deepfakes','Face2Face','FaceSwap','NeuralTextures']
-	original_path='/datasets/FaceForensics++/original_download/original_sequences/youtube/'
-	folder_list = sorted(glob(original_path+'*'))
+	folder_list = file_to_list(os.path.join(FACE_MACHINE_TXT_DIR, "ff++_pristine.txt"))
 
-	list_dict = json.load(open(f'/datasets/FaceForensics++/original_download/splits/{phase}.json','r'))
+	list_dict = json.load(open(os.path.join(ROOT, f'{phase}.json'),'r'))
 	filelist=[]
 	for i in list_dict:
 		filelist+=i
 	image_list = [i for i in folder_list if os.path.basename(i)[:3] in filelist]
 	label_list=[0]*len(image_list)
 
-
-	if dataset=='all':
-		fakes=['Deepfakes','Face2Face','FaceSwap','NeuralTextures']
-	else:
-		fakes=[dataset]
-
-	folder_list=[]
-	for fake in fakes:
-		fake_path=f'/datasets/FaceForensics++/original_download/manipulated_sequences/{fake}/'
-		folder_list_all=sorted(glob(fake_path+'*'))
-		folder_list+=[i for i in folder_list_all if os.path.basename(i)[:3] in filelist]
+	folder_list_all= file_to_list(os.path.join(FACE_MACHINE_TXT_DIR, "ff++_fakes.txt"))
+	folder_list =[i for i in folder_list_all if os.path.basename(i)[:3] in filelist]
 	label_list+=[1]*len(folder_list)
 	image_list+=folder_list
 	print(len(image_list))
@@ -138,7 +134,7 @@ def init_cdf():
 
 	label_list=[]
 
-	video_list_txt=os.path.join(DATASHAREID, 'CelebDFv2/List_of_testing_videos.txt')
+	video_list_txt= os.path.join(FACE_MACHINE_TXT_DIR, 'List_of_testing_videos.txt')
 	video_root = 'CelebDFv2'
 	with open(video_list_txt) as f:
 		
@@ -155,7 +151,7 @@ def init_cdf():
 def read_custom_data(dataset_name, txt_name = 'List_of_testing_videos.txt', base_data = DATASHAREID):
 	folder_list = []
 	label_list = []
-	with open(os.path.join(base_data, dataset_name, txt_name)) as f:
+	with open(os.path.join(txt_name)) as f:
 		for data in f:
 			line = data.split()
 			path = line[1]
@@ -170,31 +166,31 @@ def init_alexandre_master():
 	return folder_list, label_list, video_root
 def init_guy():
 	video_root = 'GitW'
-	folder_list, label_list = read_custom_data(video_root)
+	folder_list, label_list = read_custom_data(video_root, os.path.join(FACE_MACHINE_TXT_DIR, 'List_of_testing_videos_gitw.txt'))
 	print(len(label_list))
 	return folder_list, label_list, video_root
 
 def init_akool():
 	video_root = 'akool'
-	folder_list, label_list = read_custom_data(video_root, 'List_of_testing_videos_akool.txt')
+	folder_list, label_list = read_custom_data(video_root, os.path.join(FACE_MACHINE_TXT_DIR, 'List_of_testing_videos_akool.txt'))
 	print(len(label_list))
 	return folder_list, label_list, video_root
 
 def init_ffcm_subset():
 	video_root = 'ffcm_subset_100'
-	folder_list, label_list = read_custom_data(video_root)
+	folder_list, label_list = read_custom_data(video_root, os.path.join(FACE_MACHINE_TXT_DIR, 'List_of_testing_videos_ffcm_subset.txt'))
 	print(len(label_list))
 	return folder_list, label_list, video_root
 
 def init_ibeta():
 	video_root = 'ibeta'
-	folder_list, label_list = read_custom_data(video_root, "List_of_testing_videos_ibeta.txt")
+	folder_list, label_list = read_custom_data(video_root, os.path.join(FACE_MACHINE_TXT_DIR, 'List_of_testing_videos_ibeta.txt'))
 	print(len(label_list))
 	return folder_list, label_list, video_root
 
 def init_vidnoz():
 	video_root = 'vidnoz'
-	folder_list, label_list = read_custom_data(video_root, "List_of_testing_videos_vidnoz.txt")
+	folder_list, label_list = read_custom_data(video_root, os.path.join(FACE_MACHINE_TXT_DIR, 'List_of_testing_videos_vidnoz.txt'))
 	print(len(label_list))
 	return folder_list, label_list, video_root
 
@@ -213,8 +209,10 @@ def init_alexandre_pristine():
 	return init_custom_folder(video_root, 0)
 
 def init_team():
+	folder_list = file_to_list(os.path.join(FACE_MACHINE_TXT_DIR, 'team_shareID.txt'))
+	label_list = [0] * len(folder_list)
 	video_root = 'ShareIDTeam'
-	return init_custom_folder(video_root, 0)
+	return folder_list, label_list, video_root
 
 def init_fake_team():
 	video_root = 'ShareIDFake/output'

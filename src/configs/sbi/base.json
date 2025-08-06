@@ -5,9 +5,19 @@
     "image_size":380,
     "use_wandb": 1,
     "lr": 0.001,
-    "test_datasets": ["FF","CDF"],
-    "test_every": 5,
-    "degradations": 1,
+    "weighted_sampler": 1,
+    "train_datasets": ["FF", "MSU-MFSD", "REPLAY-ATTACK", "MOBIO", "SIM-MV2"],
+    "val_datasets": ["FF", "MSU-MFSD", "REPLAY-ATTACK", "MOBIO", "SIM-MV2"],
+    "test_datasets": ["CDF"],
+    "crop_mode_ff": "retina",
+    "crop_mode_test" : ["yunet"], 
+    "test_every": 10,
+    "degradations": 0,
     "poisson": 1,
-    "random_mask": 1
+    "random_mask": 1,
+    "freeze": 0,
+    "lr_scheduler": "SBI",
+    "adam": 0,
+    "backbone": "efficientnet-b4",
+    "weight_path":  ""
 }
