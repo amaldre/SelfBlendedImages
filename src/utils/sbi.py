@@ -7,6 +7,7 @@
 import torch
 from torchvision import datasets,transforms,utils
 from torch.utils.data import Dataset,IterableDataset, ConcatDataset
+from diffusers import StableDiffusionImg2ImgPipeline
 from glob import glob
 import os
 import numpy as np
@@ -43,6 +44,16 @@ else:
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from degradations import degradation
 print(f"exist_bi: {exist_bi}")
+
+pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
+    "runwayml/stable-diffusion-v1-5",
+    torch_dtype=torch.float16
+).to("cuda")
+
+# Paramètres
+prompt = "a realistic photo of a person"  # Le prompt peut être générique
+strength = 0.01  # Très faible pour ne PAS altérer le contenu
+guidance_scale = 1.0  # Faible aussi pour limiter le changement
 
 
 class SBI_Dataset(Dataset):
@@ -240,7 +251,15 @@ class SBI_Dataset(Dataset):
 		return img,img_blended,mask
 	
 	def apply_stable_diffusion(self, img):
-		return img
+		with torch.no_grad():
+			result = pipe(
+				prompt=prompt,
+				image=img,
+				strength=strength,
+				guidance_scale=guidance_scale,
+				num_inference_steps=50
+			).images[0]
+		return result
 	
 	def apply_stylegan(self, img):
 		return img
