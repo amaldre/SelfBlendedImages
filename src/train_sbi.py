@@ -76,6 +76,7 @@ def main(args):
     CROP_MODE_FF = cfg["crop_mode_ff"]
     WEIGHTED_SAMPLER = cfg["weighted_sampler"] == 1
     CROP_MODE_TEST = cfg["crop_mode_test"]
+    PG = cfg["pg"]
     seed=5
     random.seed(seed)
     torch.manual_seed(seed)
@@ -102,9 +103,9 @@ def main(args):
         source_counts = {}
         for dataset_name in cfg["train_datasets"]:
             if (dataset_name == "FF"):
-                dataset = SBI_Custom_Dataset('train', [dataset_name], image_size=image_size, degradations=DEGRADATIONS, poisson=POISSON, random_mask=RANDOM_MASK, crop_mode=CROP_MODE_FF)
+                dataset = SBI_Custom_Dataset('train', [dataset_name], image_size=image_size, degradations=DEGRADATIONS, poisson=POISSON, random_mask=RANDOM_MASK, crop_mode=CROP_MODE_FF, pg=PG)
             else:
-                dataset = SBI_Custom_Dataset('train', [dataset_name], image_size=image_size, degradations=DEGRADATIONS, poisson=POISSON, random_mask=RANDOM_MASK, crop_mode='yunet')
+                dataset = SBI_Custom_Dataset('train', [dataset_name], image_size=image_size, degradations=DEGRADATIONS, poisson=POISSON, random_mask=RANDOM_MASK, crop_mode='yunet', pg=PG)
             dataset_list.append(dataset)
             source_counts[dataset_name] = len(dataset)
         combined_dataset = ConcatDataset(dataset_list)
@@ -126,7 +127,7 @@ def main(args):
 
     else:
         train_dataset = SBI_Custom_Dataset('train', cfg["train_datasets"], 
-                                       image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE_FF)
+                                       image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE_FF, pg=PG)
         train_loader = DataLoader(train_dataset,
                         batch_size=batch_size//2,
                         shuffle=True,
@@ -137,7 +138,7 @@ def main(args):
                         worker_init_fn=train_dataset.worker_init_fn
                         )
     val_dataset = SBI_Custom_Dataset('val', cfg["val_datasets"], 
-                                     image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE_FF)
+                                     image_size = image_size, degradations = DEGRADATIONS, poisson = POISSON, random_mask = RANDOM_MASK, crop_mode = CROP_MODE_FF, pg=PG)
     val_loader = DataLoader(val_dataset,
                         batch_size=batch_size,
                         shuffle=False,

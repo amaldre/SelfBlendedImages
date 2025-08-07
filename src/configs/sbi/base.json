@@ -19,5 +19,6 @@
     "lr_scheduler": "SBI",
     "adam": 0,
     "backbone": "efficientnet-b4",
-    "weight_path":  ""
+    "weight_path":  "",
+    "pg" : 0.0
 }
