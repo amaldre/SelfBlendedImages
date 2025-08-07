@@ -45,15 +45,23 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from degradations import degradation
 print(f"exist_bi: {exist_bi}")
 
-pipe = StableDiffusionImg2ImgPipeline.from_pretrained(
-    "runwayml/stable-diffusion-v1-5",
-    torch_dtype=torch.float16
-).to("cuda")
+# Singleton class for Stable Diffusion pipeline
+class StableDiffusionSingleton:
+    _instance = None
+    
+    @classmethod
+    def get_pipeline(cls):
+        if cls._instance is None:
+            cls._instance = StableDiffusionImg2ImgPipeline.from_pretrained(
+                "runwayml/stable-diffusion-v1-5",
+                torch_dtype=torch.float16
+            ).to("cuda")
+        return cls._instance
 
-# Paramètres
-prompt = "a realistic photo of a person"  # Le prompt peut être générique
-strength = 0.01  # Très faible pour ne PAS altérer le contenu
-guidance_scale = 1.0  # Faible aussi pour limiter le changement
+# Constants for Stable Diffusion parameters
+SD_PROMPT = "a realistic photo of a person"  # Generic prompt
+SD_STRENGTH = 0.01  # Very low to avoid altering content
+SD_GUIDANCE_SCALE = 1.0  # Low to limit changes
 
 
 class SBI_Dataset(Dataset):
@@ -252,11 +260,11 @@ class SBI_Dataset(Dataset):
 	
 	def apply_stable_diffusion(self, img):
 		with torch.no_grad():
-			result = pipe(
-				prompt=prompt,
+			result = StableDiffusionSingleton.get_pipeline()(
+				prompt=SD_PROMPT,
 				image=img,
-				strength=strength,
-				guidance_scale=guidance_scale,
+				strength=SD_STRENGTH,
+				guidance_scale=SD_GUIDANCE_SCALE,
 				num_inference_steps=50
 			).images[0]
 		return result
